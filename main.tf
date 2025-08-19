@@ -223,4 +223,4 @@ resource "aws_lambda_permission" "allow_api_gateway" {
 output "api_endpoint" {
   description = "The URL endpoint for the search API"
   value       = "${aws_apigatewayv2_api.api.api_endpoint}/search"
-}
+} 
