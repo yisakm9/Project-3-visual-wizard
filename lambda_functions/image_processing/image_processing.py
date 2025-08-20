@@ -1,9 +1,12 @@
 import boto3
 import os
-import urllib.parse  
+import urllib.parse
 
-s3_client = boto3.client('s3')
-rekognition_client = boto.client('rekognition')
+# Note: s3_client is not used, but we'll leave it for now.
+# s3_client = boto3.client('s3') 
+
+# THE FIX IS ON THIS LINE: It should be boto3, not boto.
+rekognition_client = boto3.client('rekognition') 
 dynamodb = boto3.resource('dynamodb')
 table = dynamodb.Table(os.environ['TABLE_NAME'])
 
@@ -13,7 +16,7 @@ def lambda_handler(event, context):
     # Original key from the event
     key = event['Records'][0]['s3']['object']['key']
     
-    # <-- 2. ADD THIS LINE TO DECODE THE KEY
+    # Decode the key in case it has spaces or special characters
     key = urllib.parse.unquote_plus(key)
 
     response = rekognition_client.detect_labels(
