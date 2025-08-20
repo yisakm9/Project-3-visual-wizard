@@ -10,7 +10,7 @@ terraform {
     key          = "voicevault/terraform.tfstate"
     region       = "us-east-1"
     encrypt      = true
-    dynamodb_table = true
+    dynamodb_table = "visual-wizard-terraform-locks"
   }
 }
   terraform {
