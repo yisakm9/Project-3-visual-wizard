@@ -10,20 +10,10 @@ terraform {
     key          = "voicevault/terraform.tfstate"
     region       = "us-east-1"
     encrypt      = true
-    dynamodb_table = "visual-wizard-terraform-locks"
+    dynamodb_table = "ysak-terraform-state-bucket"
   }
 }
 
-resource "aws_dynamodb_table" "terraform_locks" {
-  name         = "visual-wizard-terraform-locks" 
-  billing_mode = "PAY_PER_REQUEST"
-  hash_key     = "LockID"
-
-  attribute {
-    name = "LockID"
-    type = "S"
-  }
-}
   terraform {
   required_providers {
     aws = {
