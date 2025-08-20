@@ -6,10 +6,18 @@ provider "aws" {
 # Configure the S3 backend for remote state storage
 terraform {
   backend "s3" {
-    bucket         = "visual-wizard-terraform-state-bucket" 
-    key            = "global/s3/terraform.tfstate"
-    region         = "us-east-1"
-    dynamodb_table = "visual-wizard-terraform-locks"      
+    bucket       = "ysak-terraform-state-bucket"
+    key          = "voicevault/terraform.tfstate"
+    region       = "us-east-1"
+    use_lockfile = true
+  }
+}
+  terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 6.0" 
+    }
   }
 }
 
