@@ -53,7 +53,7 @@ jobs:
       - name: 'Configure AWS Credentials (OIDC)'
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN_DEV }}
+          role-to-assume: arn:aws:iam::456202167790:role/githubaction #  IAM ROLE ARN
           aws-region: ${{ env.AWS_REGION }}
           role-session-name: GitHubActions-Terraform-Plan
 
@@ -74,7 +74,7 @@ jobs:
         # CORRECTED: The owner is 'hashicorp', not 'hashcorp'.
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.6.5 # Pinning version for stability
+          terraform_version: 1.13.1 # Pinning version for stability
 
       - name: 'Install TFLint for Terraform Linting'
         uses: terraform-linters/setup-tflint@v3
@@ -163,7 +163,7 @@ jobs:
       - name: 'Configure AWS Credentials (OIDC)'
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN_DEV }}
+          role-to-assume: arn:aws:iam::456202167790:role/githubaction #  IAM ROLE ARN
           aws-region: ${{ env.AWS_REGION }}
           role-session-name: GitHubActions-Terraform-Apply
 
@@ -171,7 +171,7 @@ jobs:
         # CORRECTED: The owner is 'hashicorp', not 'hashcorp'.
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.6.5
+          terraform_version: 1.13.1
       
       - name: 'Download Terraform Plan Artifact'
         uses: actions/download-artifact@v4
