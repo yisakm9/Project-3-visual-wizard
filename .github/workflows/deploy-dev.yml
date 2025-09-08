@@ -5,10 +5,10 @@ name: 'Terraform CI/CD for Dev'
 on:
   push:
     branches:
-      - main
+      - master
   pull_request:
     branches:
-      - main
+      - master
   workflow_dispatch:
 
 permissions:
