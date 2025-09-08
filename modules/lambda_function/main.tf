@@ -3,8 +3,8 @@
 # Data source to create a ZIP archive of the Python source code.
 data "archive_file" "lambda_zip" {
   type        = "zip"
-  source_dir  = "${path.root}/${var.source_path}"
-  output_path = "${path.root}/${var.function_name}.zip"
+  source_dir  = var.source_path
+  output_path = var.output_path
 }
 
 # Create the Lambda function resource.

@@ -58,3 +58,9 @@ variable "environment_variables" {
 #  type        = string
 #  default     = null
 #}
+
+
+variable "output_path" {
+  description = "The output path for the ZIP file, relative to the root module."
+  type        = string
+}
