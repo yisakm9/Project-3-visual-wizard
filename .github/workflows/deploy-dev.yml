@@ -163,11 +163,13 @@ jobs:
           name: tfplan-dev
           path: ${{ env.TF_WORKING_DIR }}
 
-      - name: 'Download Source Code Artifact'
+      - name: 'Download Terraform Plan and Lambda Artifacts'
         uses: actions/download-artifact@v4
         with:
-          name: source-code-dev
-          path: src/
+          name: terraform-build-artifacts-dev
+          # Download to the repository root. This will recreate the 'environments/dev' directory
+          # with the plan and zip files inside it, matching the expected structure.
+          path: .
       
       - name: 'Terraform Init'
         run: terraform -chdir="${{ env.TF_WORKING_DIR }}" init -backend-config="bucket=${{ secrets.TF_STATE_BUCKET_DEV }}"
