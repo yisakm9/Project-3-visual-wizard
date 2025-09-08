@@ -82,17 +82,17 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           tflint_version: latest
 
-      #- name: 'Run TFLint'
-      #  run: tflint --recursive
+      - name: 'Run TFLint'
+        run: tflint --recursive
         
-      #- name: 'Run Trivy for IaC Security Scanning'
-      #  uses: aquasecurity/trivy-action@master
-       # with:
-        #  scan-type: 'config'
-        #  scan-ref: '.'
-        #  exit-code: '1'
-        #  format: 'table'
-        #  severity: 'HIGH,CRITICAL'
+      - name: 'Run Trivy for IaC Security Scanning'
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'config'
+          scan-ref: '.'
+          exit-code: '1'
+          format: 'table'
+          severity: 'HIGH,CRITICAL'
 
       # --- Terraform Plan ---
       - name: 'Terraform Init'

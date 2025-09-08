@@ -21,15 +21,15 @@ resource "aws_s3_bucket_public_access_block" "photo_storage_public_access" {
 }
 
 # Configure server-side encryption for data at rest.
-resource "aws_s3_bucket_server_side_encryption_configuration" "photo_storage_encryption" {
-  bucket = aws_s3_bucket.photo_storage.id
+#resource "aws_s3_bucket_server_side_encryption_configuration" "photo_storage_encryption" {
+#  bucket = aws_s3_bucket.photo_storage.id
 
-  rule {
-    apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"
-    }
-  }
-}
+ # rule {
+  #  apply_server_side_encryption_by_default {
+   #   sse_algorithm = "AES256"
+ #   }
+ # }
+#}
 
 # Configure event notifications to trigger the image processing Lambda.
 resource "aws_s3_bucket_notification" "photo_upload_notification" {
