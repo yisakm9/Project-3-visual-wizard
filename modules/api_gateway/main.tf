@@ -26,3 +26,14 @@ resource "aws_apigatewayv2_stage" "default" {
   name        = "$default"
   auto_deploy = true
 }
+
+# ADD THIS NEW RESOURCE to grant API Gateway permission to invoke the Lambda
+resource "aws_lambda_permission" "allow_api_gateway_to_invoke_lambda" {
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = var.search_lambda_function_name # Use function name here
+  principal     = "apigateway.amazonaws.com"
+  
+  # This source_arn correctly links the permission to your specific API Gateway
+  source_arn    = "${aws_apigatewayv2_api.search_api.execution_arn}/*/*"
+}

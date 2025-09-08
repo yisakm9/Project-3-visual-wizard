@@ -10,11 +10,11 @@ variable "image_processing_lambda_arn" {
   type        = string
 }
 
-variable "lambda_s3_permission" {
-  description = "A placeholder to ensure the Lambda permission is created before the notification."
-  type        = any
-  default     = null
-}
+#variable "lambda_s3_permission" {
+#  description = "A placeholder to ensure the Lambda permission is created before the notification."
+#  type        = any
+#  default     = null
+#}
 
 variable "force_destroy_s3_bucket" {
   description = "Whether to allow the S3 bucket to be destroyed even if it's not empty."

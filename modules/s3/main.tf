@@ -41,7 +41,7 @@ resource "aws_s3_bucket_notification" "photo_upload_notification" {
   }
 
   # This depends on the Lambda permission being created first.
-  depends_on = [var.lambda_s3_permission]
+   depends_on = [aws_lambda_permission.allow_s3_to_invoke_lambda]
 }
 
 
@@ -55,4 +55,13 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "photo_storage_enc
       kms_master_key_id = var.kms_key_arn # Reference the key
     }
   }
+}
+
+# ADD THIS NEW RESOURCE to grant S3 permission to invoke the Lambda
+resource "aws_lambda_permission" "allow_s3_to_invoke_lambda" {
+  statement_id  = "AllowExecutionFromS3Bucket"
+  action        = "lambda:InvokeFunction"
+  function_name = var.image_processing_lambda_arn
+  principal     = "s3.amazonaws.com"
+  source_arn    = aws_s3_bucket.photo_storage.arn
 }

@@ -47,14 +47,14 @@ variable "environment_variables" {
   default     = {}
 }
 
-variable "s3_bucket_arn" {
-  description = "The ARN of the S3 bucket that will trigger this function. Set to null if not used."
-  type        = string
-  default     = null
-}
+#variable "s3_bucket_arn" {
+#  description = "The ARN of the S3 bucket that will trigger this function. Set to null if not used."
+#  type        = string
+#  default     = null
+#}
 
-variable "api_gateway_execution_arn" {
-  description = "The execution ARN of the API Gateway that will trigger this function. Set to null if not used."
-  type        = string
-  default     = null
-}
+#variable "api_gateway_execution_arn" {
+#  description = "The execution ARN of the API Gateway that will trigger this function. Set to null if not used."
+#  type        = string
+#  default     = null
+#}
