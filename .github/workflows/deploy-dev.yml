@@ -16,9 +16,9 @@ on:
      # - 'test/**'
      # - 'requirements-dev.txt'
      # - '.github/workflows/deploy-dev.yml'
-  pull_request:
-    branches:
-      - main
+  #pull_request:
+   # branches:
+   #   - main
     #paths:
     #  - 'environments/dev/**'
      # - 'modules/**'
