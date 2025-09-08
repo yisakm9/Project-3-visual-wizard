@@ -9,23 +9,23 @@ on:
   push:
     branches:
       - main
-    paths:
-      - 'environments/dev/**'
-      - 'modules/**'
-      - 'src/**'
-      - 'test/**'
-      - 'requirements-dev.txt'
-      - '.github/workflows/deploy-dev.yml'
+    #paths:
+    #  - 'environments/dev/**'
+     # - 'modules/**'
+     # - 'src/**'
+     # - 'test/**'
+     # - 'requirements-dev.txt'
+     # - '.github/workflows/deploy-dev.yml'
   pull_request:
     branches:
       - main
-    paths:
-      - 'environments/dev/**'
-      - 'modules/**'
-      - 'src/**'
-      - 'test/**'
-      - 'requirements-dev.txt'
-      - '.github/workflows/deploy-dev.yml'
+    #paths:
+    #  - 'environments/dev/**'
+     # - 'modules/**'
+     # - 'src/**'
+     # - 'test/**'
+     # - 'requirements-dev.txt'
+     # - '.github/workflows/deploy-dev.yml'
   workflow_dispatch:
 
 # OIDC permissions for secure AWS authentication and PR commenting.
