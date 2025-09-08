@@ -4,7 +4,7 @@
 data "archive_file" "lambda_zip" {
   type        = "zip"
   source_dir  = var.source_path
-  output_path = "${path.module}/${var.function_name}.zip"
+  output_path = "${path.cwd}/${var.function_name}.zip"
 }
 
 # Create the Lambda function resource.
