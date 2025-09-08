@@ -58,3 +58,13 @@ variable "environment_variables" {
 #  type        = string
 #  default     = null
 #}
+
+variable "source_path" {
+  description = "The path to the Lambda source directory, relative to the root module."
+  type        = string
+}
+
+variable "output_path" {
+  description = "The output path for the ZIP file, relative to the root module."
+  type        = string
+}
