@@ -71,9 +71,10 @@ jobs:
 
       # --- Infrastructure Quality Gates ---
       - name: 'Set up Terraform'
-        uses: hashcorp/setup-terraform@v3
+        # CORRECTED: The owner is 'hashicorp', not 'hashcorp'.
+        uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version:  1.13.1 # Pinning version for stability
+          terraform_version:  1.13.1 #  version for stability
 
       - name: 'Install TFLint for Terraform Linting'
         uses: terraform-linters/setup-tflint@v3
@@ -167,9 +168,10 @@ jobs:
           role-session-name: GitHubActions-Terraform-Apply
 
       - name: 'Set up Terraform'
+        # CORRECTED: The owner is 'hashicorp', not 'hashcorp'.
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.13.1 #  version for stability
+          terraform_version:  1.13.1
       
       - name: 'Download Terraform Plan Artifact'
         uses: actions/download-artifact@v4
