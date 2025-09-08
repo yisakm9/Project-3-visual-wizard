@@ -1,53 +1,68 @@
-name: Destroy Visual Wizard Infrastructure
+# .github/workflows/destroy-dev.yml
 
-# This workflow is triggered manually from the Actions tab
+# Name of the GitHub Actions workflow for destroying the environment.
+name: 'Destroy Dev Environment'
+
+# This workflow is triggered manually from the GitHub Actions UI.
 on:
   workflow_dispatch:
     inputs:
       confirmation:
-        description: 'Safety check. Type the word "destroy" to confirm.'
+        description: 'MANDATORY: To prevent accidental destruction, type "destroy" to confirm.'
         required: true
         default: 'do-not-destroy'
 
 jobs:
+  # This workflow contains a single job to destroy the infrastructure.
   terraform-destroy:
-    name: 'Terraform Destroy'
+    name: 'Terraform Destroy Dev'
     runs-on: ubuntu-latest
+    
+    # Use the 'dev' environment to access secrets securely.
+    environment: dev
+
     env:
-      AWS_REGION: "us-east-1"
-      # This TF_VAR is used in the safety check step
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      TF_WORKING_DIR: 'environments/dev'
       CONFIRMATION_PHRASE: "destroy"
 
+    # OIDC Permissions for secure AWS authentication.
+    permissions:
+      id-token: write  # Required for OIDC authentication to AWS
+      contents: read   # Required to checkout the repository
+
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
+      - name: 'Checkout Repository'
+        uses: actions/checkout@v4
 
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
+      - name: 'Configure AWS Credentials (OIDC)'
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: arn:aws:iam::456202167790:role/githubaction #  IAM ROLE ARN# Use secrets for the IAM role and region for security and flexibility.
+          
           aws-region: ${{ env.AWS_REGION }}
+          role-session-name: GitHubActions-Terraform-Destroy
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
+      - name: 'Set up Terraform'
+        uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.2.0
+          # Pin the version to match the deployment workflow for consistency.
+          terraform_version:  1.13.1
 
-      - name: Terraform Init
-        id: init
-        run: terraform init
+      - name: 'Terraform Init'
+        run: terraform -chdir="${{ env.TF_WORKING_DIR }}" init -backend-config="bucket=${{ secrets.TF_STATE_BUCKET_DEV }}"
 
-      - name: Safety Check
-        id: safety_check
+      - name: 'Verify Destroy Confirmation'
+        # This crucial safety check ensures the user explicitly typed the confirmation phrase.
         run: |
-          if [ "${{ github.event.inputs.confirmation }}" == "${CONFIRMATION_PHRASE}" ]; then
-            echo "Confirmation matches. Proceeding with destroy."
-          else
-            echo "Error: Confirmation phrase does not match. Expected '${CONFIRMATION_PHRASE}' but got '${{ github.event.inputs.confirmation }}'."
+          if [ "${{ github.event.inputs.confirmation }}" != "${{ env.CONFIRMATION_PHRASE }}" ]; then
+            echo "❌ ERROR: Confirmation phrase did not match. Aborting workflow."
             exit 1
+          else
+            echo "✅ Confirmation phrase matches. Proceeding with destroy operation."
           fi
-
-      - name: Terraform Destroy
-        id: destroy
-        run: terraform destroy -auto-approve 
+      
+      - name: 'Terraform Destroy'
+        # Applies the destroy plan. The -auto-approve flag is safe here
+        # because the entire workflow is manually triggered with a confirmation gate.
+        run: terraform -chdir="${{ env.TF_WORKING_DIR }}" destroy -auto-approve
