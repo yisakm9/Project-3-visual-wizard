@@ -42,8 +42,7 @@ module "lambda_image_processing" {
   source        = "../../modules/lambda_function"
   project_name  = var.project_name
   function_name = "image-processing"
-  source_path   = "../../src/image_processing"
-  output_path   = "image-processing.zip" # Output directly into the current (dev) directory
+  package_path  = "image-processing.zip"
   handler       = "image_processing.handler"
   runtime       = "python3.9"
   iam_role_arn  = module.iam_roles.image_processing_lambda_role_arn
@@ -59,8 +58,7 @@ module "lambda_search_by_label" {
   source                    = "../../modules/lambda_function"
   project_name              = var.project_name
   function_name             = "search-by-label"
-  source_path               = "../../src/search_by_label"
-  output_path               = "search-by-label.zip" # Output directly into the current (dev) directory
+  package_path              = "search-by-label.zip"
   handler                   = "search_by_label.handler"
   runtime                   = "python3.9"
   iam_role_arn              = module.iam_roles.search_by_label_lambda_role_arn

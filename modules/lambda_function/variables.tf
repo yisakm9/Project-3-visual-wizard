@@ -1,4 +1,8 @@
 # modules/lambda_function/variables.tf
+variable "package_path" {
+  description = "The path to the pre-built Lambda deployment package (ZIP file)."
+  type        = string
+}
 
 variable "project_name" {
   type = string
@@ -9,10 +13,10 @@ variable "function_name" {
   type        = string
 }
 
-variable "source_path" {
-  description = "The path to the directory containing the Lambda source code."
-  type        = string
-}
+#variable "source_path" {
+ # description = "The path to the directory containing the Lambda source code."
+  #type        = string
+#}
 
 variable "handler" {
   description = "The handler for the Lambda function (e.g., 'app.handler')."
@@ -60,7 +64,7 @@ variable "environment_variables" {
 #}
 
 
-variable "output_path" {
-  description = "The output path for the ZIP file, relative to the root module."
-  type        = string
-}
+#variable "output_path" {
+ # description = "The output path for the ZIP file, relative to the root module."
+ # type        = string
+#}
