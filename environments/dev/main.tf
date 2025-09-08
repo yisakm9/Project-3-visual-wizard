@@ -31,18 +31,18 @@ module "iam_roles" {
 
 # Create the API Gateway
 module "api_search" {
-  source                   = "../../modules/api_gateway"
-  project_name             = var.project_name
-  search_lambda_invoke_arn = module.lambda_search_by_label.invoke_arn
+  source                        = "../../modules/api_gateway"
+  project_name                  = var.project_name
+  search_lambda_invoke_arn      = module.lambda_search_by_label.invoke_arn
   search_lambda_function_name   = module.lambda_search_by_label.function_name # Pass the function name
 }
 
 # Deploy the image processing Lambda function
 module "lambda_image_processing" {
-  source      = "../../modules/lambda_function"
+  source        = "../../modules/lambda_function"
   project_name  = var.project_name
   function_name = "image-processing"
-  source_path   = "../../src/image_processing/"
+  source_path   = "../../src/image_processing"
   handler       = "image_processing.handler"
   runtime       = "python3.9"
   iam_role_arn  = module.iam_roles.image_processing_lambda_role_arn
@@ -58,7 +58,7 @@ module "lambda_search_by_label" {
   source                    = "../../modules/lambda_function"
   project_name              = var.project_name
   function_name             = "search-by-label"
-  source_path               = "../../src/search_by_label/"
+   source_path              = "../../src/search_by_label"
   handler                   = "search_by_label.handler"
   runtime                   = "python3.9"
   iam_role_arn              = module.iam_roles.search_by_label_lambda_role_arn
