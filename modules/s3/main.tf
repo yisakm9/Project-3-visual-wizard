@@ -43,3 +43,16 @@ resource "aws_s3_bucket_notification" "photo_upload_notification" {
   # This depends on the Lambda permission being created first.
   depends_on = [var.lambda_s3_permission]
 }
+
+
+# CONFIGURED TO USE KMS INSTEAD OF AES256
+resource "aws_s3_bucket_server_side_encryption_configuration" "photo_storage_encryption" {
+  bucket = aws_s3_bucket.photo_storage.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm     = "aws:kms" # Use KMS
+      kms_master_key_id = var.kms_key_arn # Reference the key
+    }
+  }
+}

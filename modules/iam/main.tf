@@ -40,6 +40,15 @@ resource "aws_iam_policy" "image_processing_lambda_policy" {
         Action   = "s3:GetObject",
         Resource = "${var.s3_bucket_arn}/*"
       },
+      # ADD THIS KMS STATEMENT
+      {
+        Effect   = "Allow",
+        Action   = [
+          "kms:Decrypt",
+          "kms:GenerateDataKey*"
+        ],
+        Resource = var.kms_key_arn
+      },
       {
         Effect   = "Allow",
         Action   = "rekognition:DetectLabels",

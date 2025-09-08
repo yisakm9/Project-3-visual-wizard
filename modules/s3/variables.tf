@@ -21,3 +21,8 @@ variable "force_destroy_s3_bucket" {
   type        = bool
   default     = false
 }
+
+variable "kms_key_arn" {
+  description = "The ARN of the KMS key for S3 bucket encryption."
+  type        = string
+}

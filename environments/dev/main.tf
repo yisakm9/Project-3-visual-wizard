@@ -1,4 +1,8 @@
 # environments/dev/main.tf
+module "kms" {
+  source       = "../../modules/kms"
+  project_name = var.project_name
+}
 
 # Create the S3 bucket
 module "s3_storage" {
@@ -7,6 +11,7 @@ module "s3_storage" {
   image_processing_lambda_arn   = module.lambda_image_processing.function_arn
   lambda_s3_permission          = module.lambda_image_processing.s3_permission
   force_destroy_s3_bucket       = true # Safe for dev environment
+  kms_key_arn                   = module.kms.key_arn 
 }
 
 # Create the DynamoDB table
@@ -21,6 +26,7 @@ module "iam_roles" {
   project_name       = var.project_name
   s3_bucket_arn      = module.s3_storage.bucket_arn
   dynamodb_table_arn = module.dynamodb_metadata.table_arn
+  kms_key_arn        = module.kms.key_arn 
 }
 
 # Create the API Gateway
