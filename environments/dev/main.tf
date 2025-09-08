@@ -37,7 +37,7 @@ module "api_search" {
   search_lambda_function_name   = module.lambda_search_by_label.function_name # Pass the function name
 }
 
-# Deploy the image processing Lambda  function
+# Deploy the image processing Lambda   function
 module "lambda_image_processing" {
   source      = "../../modules/lambda_function"
   project_name  = var.project_name
