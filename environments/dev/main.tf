@@ -14,7 +14,7 @@ module "s3_storage" {
   kms_key_arn                   = module.kms.key_arn 
 }
 
-# Create the DynamoDB  table
+# Create the DynamoDB table
 module "dynamodb_metadata" {
   source       = "../../modules/dynamodb"
   project_name = var.project_name
