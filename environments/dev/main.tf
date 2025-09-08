@@ -53,7 +53,7 @@ module "lambda_image_processing" {
   }
 }
 
-# Deploy the search by label  Lambdafunction
+# Deploy the search by label   Lambdafunction
 module "lambda_search_by_label" {
   source                    = "../../modules/lambda_function"
   project_name              = var.project_name
