@@ -1,6 +1,3 @@
-# .github/workflows/deploy-dev.yml
-
-# Name of the full CI/CD workflow for the Dev environment.
 name: 'Terraform CI/CD for Dev'
 
 # Triggers the workflow on pushes/PRs to main, or manually.
