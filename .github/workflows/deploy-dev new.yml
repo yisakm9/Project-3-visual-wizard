@@ -1,7 +1,7 @@
 # .github/workflows/deploy-dev.yml
 
 # Name of the full CI/CD workflow for the Dev environment.
-name: 'Terraform CI/CD for Dev'
+name: 'backup-deploy-dev'
 
 # Triggers the workflow on pushes/PRs to main, or manually.
 # NOTE: The 'paths' filter has been removed to ensure the workflow always runs on changes to the main branch,
