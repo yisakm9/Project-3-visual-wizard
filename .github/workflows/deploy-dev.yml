@@ -47,7 +47,10 @@ jobs:
       
       - name: 'Run Pytest Unit Tests'
         run: pytest test/
-
+      - name: 'Create Lambda Deployment Packages'
+        run: |
+          (cd src/image_processing && zip -r ../../environments/dev/image-processing.zip .)
+          (cd src/search_by_label && zip -r ../../environments/dev/search-by-label.zip .)
       - name: 'Set up Terraform'
         uses: hashicorp/setup-terraform@v3
         with:
@@ -165,10 +168,7 @@ jobs:
         with:
           name: source-code-dev
           path: src/
-      - name: 'Create Lambda Deployment Packages'
-        run: |
-          (cd src/image_processing && zip -r ../../environments/dev/image-processing.zip .)
-          (cd src/search_by_label && zip -r ../../environments/dev/search-by-label.zip .)
+      
       - name: 'Terraform Init'
         run: terraform -chdir="${{ env.TF_WORKING_DIR }}" init -backend-config="bucket=${{ secrets.TF_STATE_BUCKET_DEV }}"
         
