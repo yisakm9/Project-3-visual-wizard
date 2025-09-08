@@ -1,46 +1,29 @@
 # .github/workflows/deploy-dev.yml
 
-# Name of the full CI/CD workflow for the Dev environment.
 name: 'Terraform CI/CD for Dev'
 
 # Triggers the workflow on pushes/PRs to main, or manually.
-# Path filters ensure this only runs when relevant code changes.
+# REMOVED the 'paths' filter to ensure it always runs on changes to the main branch.
 on:
   push:
     branches:
       - main
-    #paths:
-    #  - 'environments/dev/**'
-     # - 'modules/**'
-     # - 'src/**'
-     # - 'test/**'
-     # - 'requirements-dev.txt'
-     # - '.github/workflows/deploy-dev.yml'
-  #pull_request:
-   # branches:
-   #   - main
-    #paths:
-    #  - 'environments/dev/**'
-     # - 'modules/**'
-     # - 'src/**'
-     # - 'test/**'
-     # - 'requirements-dev.txt'
-     # - '.github/workflows/deploy-dev.yml'
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 # OIDC permissions for secure AWS authentication and PR commenting.
 permissions:
-  id-token: write      # Required for OIDC authentication to AWS
-  contents: read       # Required to checkout the repository
-  pull-requests: write # Required to post plan comments on the PR
+  id-token: write
+  contents: read
+  pull-requests: write
 
 jobs:
-  # JOB 1: VALIDATE AND PLAN
-  # This job runs on all triggers to provide feedback on pull requests.
   validate_and_plan:
     name: 'Validate, Test, Scan & Plan'
     runs-on: ubuntu-latest
-    environment: dev # Reference the 'dev' environment for secrets
+    environment: dev
 
     env:
       AWS_REGION: ${{ secrets.AWS_REGION }}
@@ -53,11 +36,11 @@ jobs:
       - name: 'Configure AWS Credentials (OIDC)'
         uses: aws-actions/configure-aws-credentials@v4
         with:
+          # BEST PRACTICE: Use a secret for the role ARN, not a hardcoded value.
           role-to-assume: arn:aws:iam::456202167790:role/githubaction #  IAM ROLE ARN
           aws-region: ${{ env.AWS_REGION }}
           role-session-name: GitHubActions-Terraform-Plan
 
-      # --- Lambda Function Test Steps ---
       - name: 'Set up Python 3.9'
         uses: actions/setup-python@v5
         with:
@@ -69,12 +52,11 @@ jobs:
       - name: 'Run Pytest Unit Tests'
         run: pytest test/
 
-      # --- Infrastructure Quality Gates ---
       - name: 'Set up Terraform'
-        # CORRECTED: The owner is 'hashicorp', not 'hashcorp'.
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version:  1.13.1 #  version for stability
+          # Standardizing on the version from our previous fixes.
+          terraform_version: 1.6.5
 
       - name: 'Install TFLint for Terraform Linting'
         uses: terraform-linters/setup-tflint@v3
@@ -94,7 +76,6 @@ jobs:
           format: 'table'
           severity: 'HIGH,CRITICAL'
 
-      # --- Terraform Plan ---
       - name: 'Terraform Init'
         id: init
         run: terraform -chdir="${{ env.TF_WORKING_DIR }}" init -backend-config="bucket=${{ secrets.TF_STATE_BUCKET_DEV }}"
@@ -106,7 +87,6 @@ jobs:
         id: plan
         run: terraform -chdir="${{ env.TF_WORKING_DIR }}" plan -no-color -out=tfplan
 
-      # --- Comment on Pull Request ---
       - name: 'Create Plan Output for PR Comment'
         if: github.event_name == 'pull_request'
         id: format-plan
@@ -128,7 +108,6 @@ jobs:
             if (botComment) { await github.rest.issues.updateComment({ owner: context.repo.owner, repo: context.repo.repo, comment_id: botComment.id, body: newBody }); }
             else { await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, body: newBody }); }
 
-      # --- Upload Artifacts for Apply Job ---
       - name: 'Upload Terraform Plan Artifact'
         uses: actions/upload-artifact@v4
         with:
@@ -143,12 +122,10 @@ jobs:
           path: src/
           retention-days: 1
 
-  # JOB 2: APPLY CHANGES TO DEV ENVIRONMENT
   deploy_to_dev:
     name: 'Deploy to Dev'
     runs-on: ubuntu-latest
     needs: validate_and_plan
-    # This job only runs on a successful merge/push to the main branch.
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     environment: dev
 
@@ -163,15 +140,15 @@ jobs:
       - name: 'Configure AWS Credentials (OIDC)'
         uses: aws-actions/configure-aws-credentials@v4
         with:
+          # BEST PRACTICE: Use a secret for the role ARN.
           role-to-assume: arn:aws:iam::456202167790:role/githubaction #  IAM ROLE ARN
           aws-region: ${{ env.AWS_REGION }}
           role-session-name: GitHubActions-Terraform-Apply
 
       - name: 'Set up Terraform'
-        # CORRECTED: The owner is 'hashicorp', not 'hashcorp'.
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version:  1.13.1
+          terraform_version: 1.6.5
       
       - name: 'Download Terraform Plan Artifact'
         uses: actions/download-artifact@v4
