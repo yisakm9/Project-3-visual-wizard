@@ -5,27 +5,27 @@ name: 'Terraform CI/CD for Dev'
 
 # Triggers the workflow on pushes/PRs to main, or manually.
 # Path filters ensure this only runs when relevant code changes.
-#on:
-#  push:
-  #  branches:
-  #    - main
-    #paths:
-    #  - 'environments/dev/**'
-     # - 'modules/**'
-     # - 'src/**'
-     # - 'test/**'
-     # - 'requirements-dev.txt'
-     # - '.github/workflows/deploy-dev.yml'
-  #pull_request:
-   # branches:
-    #  - main
-    #paths:
-    #  - 'environments/dev/**'
-     # - 'modules/**'
-     # - 'src/**'
-     # - 'test/**'
-     # - 'requirements-dev.txt'
-     # - '.github/workflows/deploy-dev.yml'
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'environments/dev/**'
+      - 'modules/**'
+      - 'src/**'
+      - 'test/**'
+      - 'requirements-dev.txt'
+      - '.github/workflows/deploy-dev.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'environments/dev/**'
+      - 'modules/**'
+      - 'src/**'
+      - 'test/**'
+      - 'requirements-dev.txt'
+      - '.github/workflows/deploy-dev.yml'
   workflow_dispatch:
 
 # OIDC permissions for secure AWS authentication and PR commenting.
