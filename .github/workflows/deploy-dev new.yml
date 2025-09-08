@@ -8,7 +8,7 @@ name: 'Terraform CI/CD for Dev'
 # preventing the "not triggering" issue you experienced.
 on:
   push:
-    branches:
+   branches:
       - main
   pull_request:
     branches:
