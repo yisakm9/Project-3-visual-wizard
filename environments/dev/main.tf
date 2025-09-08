@@ -4,7 +4,7 @@ module "kms" {
   project_name = var.project_name
 }
 
-# Create the S3 bucket
+# Create the S3  bucket
 module "s3_storage" {
   source                        = "../../modules/s3"
   project_name                  = var.project_name
