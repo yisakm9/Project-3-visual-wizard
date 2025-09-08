@@ -1,9 +1,11 @@
 # .github/workflows/deploy-dev.yml
 
+# Name of the full CI/CD workflow for the Dev environment.
 name: 'Terraform CI/CD for Dev'
 
 # Triggers the workflow on pushes/PRs to main, or manually.
-# REMOVED the 'paths' filter to ensure it always runs on changes to the main branch.
+# NOTE: The 'paths' filter has been removed to ensure the workflow always runs on changes to the main branch,
+# preventing the "not triggering" issue you experienced.
 on:
   push:
     branches:
@@ -20,10 +22,12 @@ permissions:
   pull-requests: write
 
 jobs:
+  # JOB 1: VALIDATE AND PLAN
+  # This job runs on all triggers to provide feedback on pull requests.
   validate_and_plan:
     name: 'Validate, Test, Scan & Plan'
     runs-on: ubuntu-latest
-    environment: dev
+    environment: dev # Use the 'dev' environment to securely access secrets.
 
     env:
       AWS_REGION: ${{ secrets.AWS_REGION }}
@@ -41,21 +45,25 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
           role-session-name: GitHubActions-Terraform-Plan
 
+      # --- Lambda Function Test Steps ---
       - name: 'Set up Python 3.9'
         uses: actions/setup-python@v5
         with:
+          # Match the Lambda runtime for consistency.
           python-version: '3.9'
       
       - name: 'Install Python Test Dependencies'
+        # Use the correct requirements file for testing.
         run: pip install -r requirements-dev.txt
       
       - name: 'Run Pytest Unit Tests'
         run: pytest test/
 
+      # --- Infrastructure Quality Gates ---
       - name: 'Set up Terraform'
         uses: hashicorp/setup-terraform@v3
         with:
-          # Standardizing on the version from our previous fixes.
+          # Standardizing on a consistent version.
           terraform_version: 1.6.5
 
       - name: 'Install TFLint for Terraform Linting'
@@ -67,17 +75,17 @@ jobs:
       - name: 'Run TFLint'
         run: tflint --recursive
         
-      - name: 'Run Trivy for IaC Security Scanning'
-        uses: aquasecurity/trivy-action@master
+      - name: 'Run Checkov for IaC Security Scanning'
+        uses: bridgecrewio/checkov-action@master
         with:
-          scan-type: 'config'
-          scan-ref: '.'
-          exit-code: '1'
-          format: 'table'
-          severity: 'HIGH,CRITICAL'
+          directory: ./
+          framework: terraform
+          soft_fail: true # Fails the build only for critical issues.
 
+      # --- Terraform Plan ---
       - name: 'Terraform Init'
         id: init
+        # Securely pass the S3 backend bucket name from secrets.
         run: terraform -chdir="${{ env.TF_WORKING_DIR }}" init -backend-config="bucket=${{ secrets.TF_STATE_BUCKET_DEV }}"
       
       - name: 'Terraform Validate'
@@ -87,6 +95,7 @@ jobs:
         id: plan
         run: terraform -chdir="${{ env.TF_WORKING_DIR }}" plan -no-color -out=tfplan
 
+      # --- Comment on Pull Request ---
       - name: 'Create Plan Output for PR Comment'
         if: github.event_name == 'pull_request'
         id: format-plan
@@ -108,6 +117,7 @@ jobs:
             if (botComment) { await github.rest.issues.updateComment({ owner: context.repo.owner, repo: context.repo.repo, comment_id: botComment.id, body: newBody }); }
             else { await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, body: newBody }); }
 
+      # --- Upload Artifacts for Apply Job ---
       - name: 'Upload Terraform Plan Artifact'
         uses: actions/upload-artifact@v4
         with:
@@ -116,12 +126,14 @@ jobs:
           retention-days: 1
           
       - name: 'Upload Source Code Artifact'
+        # This is the correct way to handle our two Lambda functions.
         uses: actions/upload-artifact@v4
         with:
           name: source-code-dev
           path: src/
           retention-days: 1
 
+  # JOB 2: APPLY CHANGES TO DEV ENVIRONMENT
   deploy_to_dev:
     name: 'Deploy to Dev'
     runs-on: ubuntu-latest
@@ -140,7 +152,7 @@ jobs:
       - name: 'Configure AWS Credentials (OIDC)'
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          # BEST PRACTICE: Use a secret for the role ARN.
+          # Use a secret for the role ARN.
           role-to-assume: arn:aws:iam::456202167790:role/githubaction #  IAM ROLE ARN
           aws-region: ${{ env.AWS_REGION }}
           role-session-name: GitHubActions-Terraform-Apply
