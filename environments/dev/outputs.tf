@@ -39,10 +39,7 @@ output "api_search_url_example" {
   value       = "${module.api_gateway.api_endpoint}/search?label=car"
 }
 
-output "dynamodb_table_name" {
-  description = "The name of the DynamoDB table storing image labels and metadata."
-  value       = module.dynamodb.table_name
-}
+
 
 output "image_processing_lambda_function_name" {
   description = "The name of the Lambda function that processes uploaded images."
