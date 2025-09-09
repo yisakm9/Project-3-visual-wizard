@@ -2,14 +2,13 @@
 
 name: 'Terraform CI/CD for Dev'
 
-# Triggers on push/PR to 'main'. If your branch is 'master', change it here.
 on:
   push:
     branches:
-      - master
+      - master 
   pull_request:
     branches:
-      - master
+      - master 
   workflow_dispatch:
 
 permissions:
@@ -44,16 +43,17 @@ jobs:
           python-version: '3.9'
       
       - name: 'Install Python Test Dependencies'
-        # CORRECTED: Use the correct requirements file for testing.
         run: pip install -r requirements-dev.txt
       
+      # --- THIS IS THE CORRECTED STEP ---
       - name: 'Run Pytest Unit Tests'
         env:
           DYNAMODB_TABLE_NAME: "mock-table-for-testing"
           DYNAMODB_INDEX_NAME: "mock-index-for-testing"
+          # Add the project root to the PYTHONPATH so imports from 'src' work correctly.
+          PYTHONPATH: "." 
         run: pytest test/
 
-      # --- CORRECTED: Build Lambda packages BEFORE planning ---
       - name: 'Create Lambda Deployment Packages'
         run: |
           (cd src/image_processing && zip -r ../../environments/dev/image-processing.zip .)
@@ -62,13 +62,12 @@ jobs:
       - name: 'Set up Terraform'
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.13.1 # BEST PRACTICE: Pin version
+          terraform_version:  1.13.1 #
 
       - name: 'Install TFLint for Terraform Linting'
         uses: terraform-linters/setup-tflint@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-      
       - name: 'Run TFLint'
         run: tflint --recursive
         
@@ -90,7 +89,6 @@ jobs:
 
       - name: 'Terraform Plan'
         id: plan
-        # This will now succeed because the zip files exist for the filebase64sha256 function.
         run: terraform -chdir="${{ env.TF_WORKING_DIR }}" plan -no-color -out=tfplan
 
       - name: 'Create Plan Output for PR Comment'
@@ -115,7 +113,6 @@ jobs:
             if (botComment) { await github.rest.issues.updateComment({ owner: context.repo.owner, repo: context.repo.repo, comment_id: botComment.id, body: newBody }); }
             else { await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, body: newBody }); }
 
-      # CORRECTED: Upload all artifacts needed by the next job in one go.
       - name: 'Upload Terraform and Lambda Artifacts'
         uses: actions/upload-artifact@v4
         with:
@@ -151,9 +148,8 @@ jobs:
       - name: 'Set up Terraform'
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.13.1
+          terraform_version:  1.13.1 #
       
-      # CORRECTED: Download the single, unified artifact.
       - name: 'Download Build Artifacts'
         uses: actions/download-artifact@v4
         with:
