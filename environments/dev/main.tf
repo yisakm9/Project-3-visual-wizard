@@ -1,0 +1,109 @@
+# ------------------------------------------------------------------------------
+# DATA SOURCES - Prepare Lambda deployment packages
+# ------------------------------------------------------------------------------
+
+data "archive_file" "image_processing_lambda" {
+  type        = "zip"
+  source_dir  = "${path.module}/../../src/image_processing"
+  output_path = "${path.module}/dist/image_processing.zip"
+}
+
+data "archive_file" "search_by_label_lambda" {
+  type        = "zip"
+  source_dir  = "${path.module}/../../src/search_by_label"
+  output_path = "${path.module}/dist/search_by_label.zip"
+}
+
+# ------------------------------------------------------------------------------
+# CORE INFRASTRUCTURE MODULES
+# ------------------------------------------------------------------------------
+
+module "s3" {
+  source        = "../../modules/s3"
+  bucket_name   = "${var.project_name}-images-${var.environment}"
+  sqs_queue_arn = module.sqs.queue_arn
+  tags          = var.common_tags
+}
+
+module "sqs" {
+  source         = "../../modules/sqs"
+  queue_name     = "${var.project_name}-queue-${var.environment}"
+  s3_bucket_name = module.s3.bucket_name
+  tags           = var.common_tags
+}
+
+module "dynamodb" {
+  source     = "../../modules/dynamodb"
+  table_name = "${var.project_name}-labels-${var.environment}"
+  hash_key   = "image_key"
+  tags       = var.common_tags
+}
+
+# ------------------------------------------------------------------------------
+# IAM ROLES AND POLICIES
+# ------------------------------------------------------------------------------
+
+module "image_processing_iam" {
+  source             = "../../modules/iam"
+  role_name          = "${var.project_name}-image-processor-role-${var.environment}"
+  policy_name        = "${var.project_name}-image-processor-policy-${var.environment}"
+  s3_bucket_arn      = module.s3.bucket_arn
+  sqs_queue_arn      = module.sqs.queue_arn
+  dynamodb_table_arn = module.dynamodb.table_arn
+  tags               = var.common_tags
+}
+
+module "search_iam" {
+  source             = "../../modules/iam"
+  role_name          = "${var.project_name}-search-role-${var.environment}"
+  policy_name        = "${var.project_name}-search-policy-${var.environment}"
+  dynamodb_table_arn = module.dynamodb.table_arn
+  s3_bucket_arn      = null
+  sqs_queue_arn      = null
+  tags               = var.common_tags
+}
+
+# ------------------------------------------------------------------------------
+# LAMBDA FUNCTION MODULES
+# ------------------------------------------------------------------------------
+
+module "image_processing_lambda" {
+  source           = "../../modules/lambda_function"
+  function_name    = "${var.project_name}-image-processor-${var.environment}"
+  handler          = "image_processing.handler"
+  runtime          = "python3.9"
+  iam_role_arn     = module.image_processing_iam.role_arn
+  sqs_queue_arn    = module.sqs.queue_arn
+  source_code_path = data.archive_file.image_processing_lambda.output_path
+  source_code_hash = data.archive_file.image_processing_lambda.output_base64sha256
+  environment_variables = {
+    DYNAMODB_TABLE_NAME = module.dynamodb.table_name
+  }
+  tags = var.common_tags
+}
+
+module "search_lambda" {
+  source           = "../../modules/lambda_function"
+  function_name    = "${var.project_name}-search-by-label-${var.environment}"
+  handler          = "search_by_label.handler"
+  runtime          = "python3.9"
+  iam_role_arn     = module.search_iam.role_arn
+  source_code_path = data.archive_file.search_by_label_lambda.output_path
+  source_code_hash = data.archive_file.search_by_label_lambda.output_base64sha256
+  sqs_queue_arn    = null
+  environment_variables = {
+    DYNAMODB_TABLE_NAME = module.dynamodb.table_name
+  }
+  tags = var.common_tags
+}
+
+# ------------------------------------------------------------------------------
+# API GATEWAY MODULE
+# ------------------------------------------------------------------------------
+
+module "api_gateway" {
+  source                   = "../../modules/api_gateway"
+  api_name                 = "${var.project_name}-api-${var.environment}"
+  search_lambda_invoke_arn = module.search_lambda.function_invoke_arn
+  tags                     = var.common_tags
+}
