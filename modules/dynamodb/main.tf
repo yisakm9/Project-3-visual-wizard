@@ -1,27 +1,28 @@
 # modules/dynamodb/main.tf
 
-# Create the DynamoDB table to store image metadata and labels.
 resource "aws_dynamodb_table" "image_metadata" {
   name         = "${var.project_name}-image-metadata"
   billing_mode = "PAY_PER_REQUEST"
-  hash_key     = "ImageKey"
+  
+  # --- CORRECTED: Define a Composite Primary Key ---
+  hash_key  = "ImageKey"
+  range_key = "Label"
 
   attribute {
     name = "ImageKey"
-    type = "S" # String
+    type = "S"
   }
-
-  # Global Secondary Index (GSI) to allow efficient searching by labels.
-  # This is the key to our search functionality.
-  global_secondary_index {
-    name            = "LabelsIndex"
-    hash_key        = "Label"
-    projection_type = "ALL" # Include all attributes in the index
-  }
-
+  
   attribute {
     name = "Label"
     type = "S"
+  }
+
+  # The GSI is still needed to search by 'Label' across all images.
+  global_secondary_index {
+    name            = "LabelsIndex"
+    hash_key        = "Label"
+    projection_type = "ALL"
   }
 
   tags = {
