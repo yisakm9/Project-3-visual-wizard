@@ -1,15 +1,80 @@
-# test/image_processing/test_image_processing.py
-# (This is a conceptual example. A real implementation would require more setup.)
-import pytest
-from moto import mock_aws
+# src/image_processing/image_processing.py
 
-# Placeholder for tests
-def test_placeholder():
+import boto3
+import os
+import logging
+import urllib.parse # Import the urllib library
+
+# Configure logging
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+
+# Initialize AWS clients
+s3_client = boto3.client('s3')
+rekognition_client = boto3.client('rekognition')
+dynamodb = boto3.resource('dynamodb')
+
+# Get table name from environment variables
+TABLE_NAME = os.environ.get('DYNAMODB_TABLE_NAME')
+if not TABLE_NAME:
+    raise ValueError("Missing environment variable: DYNAMODB_TABLE_NAME")
+table = dynamodb.Table(TABLE_NAME)
+
+def handler(event, context):
     """
-    TODO: Implement unit tests using pytest and moto.
-    - Mock S3, Rekognition, and DynamoDB.
-    - Create a sample S3 event.
-    - Call the handler.
-    - Assert that Rekognition was called and DynamoDB received the correct items.
+    This function is triggered by an S3 event. It uses Amazon Rekognition
+    to detect labels in the uploaded image and stores them in DynamoDB.
     """
-    assert True
+    logger.info("Received event: %s", event)
+
+    # Get the bucket and the URL-encoded key from the S3 event
+    bucket_name = event['Records'][0]['s3']['bucket']['name']
+    encoded_image_key = event['Records'][0]['s3']['object']['key']
+
+    # --- THIS IS THE FIX ---
+    # Decode the S3 object key to handle spaces (+) and other special characters.
+    image_key = urllib.parse.unquote_plus(encoded_image_key)
+    
+    logger.info("Processing decoded image key '%s' from bucket '%s'.", image_key, bucket_name)
+
+    try:
+        # Call Rekognition to detect labels
+        response = rekognition_client.detect_labels(
+            Image={
+                'S3Object': {
+                    'Bucket': bucket_name,
+                    'Name': image_key # Use the decoded key
+                }
+            },
+            MaxLabels=10,
+            MinConfidence=80
+        )
+
+        labels = [label['Name'] for label in response.get('Labels', [])]
+        logger.info("Detected labels: %s", labels)
+
+        if not labels:
+            logger.warning("No labels detected with sufficient confidence for image %s.", image_key)
+            return
+
+        # Store each label as a separate item in DynamoDB for the GSI to work
+        with table.batch_writer() as batch:
+            for label in labels:
+                batch.put_item(
+                    Item={
+                        'ImageKey': image_key,
+                        'Label': label,
+                        'AllLabels': labels
+                    }
+                )
+
+        logger.info("Successfully stored labels for image %s in DynamoDB.", image_key)
+
+        return {
+            'statusCode': 200,
+            'body': f'Successfully processed image {image_key} and found labels: {labels}'
+        }
+
+    except Exception as e:
+        logger.error("Error processing image %s: %s", image_key, str(e))
+        raise e
