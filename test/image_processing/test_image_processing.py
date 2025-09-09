@@ -1,5 +1,3 @@
-# test/image_processing/test_image_processing.py
-
 import pytest
 import boto3
 from moto import mock_aws
