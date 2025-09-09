@@ -12,7 +12,9 @@ logger.setLevel(logging.INFO)
 
 # Initialize AWS clients
 s3_client = boto3.client('s3')
-rekognition_client = boto.client('rekognition')
+# --- FIX IS ON THIS LINE ---
+rekognition_client = boto3.client('rekognition')
+# --- FIX IS ON THIS LINE ---
 dynamodb = boto3.resource('dynamodb')
 
 # Get DynamoDB table name from environment variables
@@ -34,23 +36,20 @@ def handler(event, context):
             # The actual S3 event is nested inside the SQS message body
             body = json.loads(record['body'])
             
-            # --- FIX STARTS HERE ---
             # Check if this is a test event from the S3 console and skip it
             if 'Event' in body and body['Event'] == 's3:TestEvent':
                 logger.warning("This is a test event from S3. Skipping processing.")
-                continue # Skips to the next message in the batch
+                continue
 
             # For a real event, the S3 data is in the 'Records' key
             if 'Records' not in body:
                 logger.error(f"SQS message body does not contain 'Records' key: {body}")
                 continue
-            # --- FIX ENDS HERE ---
 
             s3_record = body['Records'][0]
             
             # Extract bucket name and object key from the S3 event
             bucket_name = s3_record['s3']['bucket']['name']
-            # The object key can have special characters, so we need to unquote it
             object_key = urllib.parse.unquote_plus(s3_record['s3']['object']['key'])
 
             logger.info(f"Processing image '{object_key}' from bucket '{bucket_name}'")
@@ -82,7 +81,6 @@ def handler(event, context):
 
         except Exception as e:
             logger.error(f"Error processing record: {e}")
-            # Re-raise the exception to allow SQS to handle the message retry/dead-letter queue logic
             raise e
             
     return {
