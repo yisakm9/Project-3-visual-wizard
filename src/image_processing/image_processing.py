@@ -1,3 +1,5 @@
+# src/image_processing/image_processing.py
+
 import boto3
 import os
 import logging
@@ -6,23 +8,24 @@ import urllib.parse
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-rekognition_client = boto3.client('rekognition')
-dynamodb = boto3.resource('dynamodb')
+# Get table name from environment variable - this is safe to keep global
 TABLE_NAME = os.environ.get('DYNAMODB_TABLE_NAME')
 
 def handler(event, context):
     """
     This function is triggered by an S3 event and processes the uploaded image.
     """
-    # --- CANARY LOG MESSAGE ---
-    logger.info("--- EXECUTING LATEST CODE VERSION V3 ---")
-
+    # --- FINAL FIX: Initialize all boto3 clients and resources inside the handler ---
+    rekognition_client = boto3.client('rekognition')
+    dynamodb = boto3.resource('dynamodb')
+    
     if not TABLE_NAME:
         raise ValueError("Environment variable DYNAMODB_TABLE_NAME is not set.")
     table = dynamodb.Table(TABLE_NAME)
 
     logger.info("Received event: %s", event)
 
+    # ... (the rest of the handler logic remains exactly the same) ...
     bucket_name = event['Records'][0]['s3']['bucket']['name']
     encoded_image_key = event['Records'][0]['s3']['object']['key']
     image_key = urllib.parse.unquote_plus(encoded_image_key)
