@@ -1,0 +1,6 @@
+# AWS SDK
+boto3
+
+# Testing Frameworks
+pytest
+moto[s3,dynamodb,iam,rekognition]
