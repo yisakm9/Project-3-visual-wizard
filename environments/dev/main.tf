@@ -53,13 +53,17 @@ module "image_processing_iam" {
   tags               = var.common_tags
 }
 
+# IAM role for the search-by-label Lambda function
 module "search_iam" {
   source             = "../../modules/iam"
   role_name          = "${var.project_name}-search-role-${var.environment}"
   policy_name        = "${var.project_name}-search-policy-${var.environment}"
   dynamodb_table_arn = module.dynamodb.table_arn
-  s3_bucket_arn      = null
+  
+  # Ensure these are null for the search role
+  s3_bucket_arn      = null 
   sqs_queue_arn      = null
+  
   tags               = var.common_tags
 }
 
@@ -82,6 +86,7 @@ module "image_processing_lambda" {
   tags = var.common_tags
 }
 
+# Lambda function for searching by label, triggered by API Gateway
 module "search_lambda" {
   source           = "../../modules/lambda_function"
   function_name    = "${var.project_name}-search-by-label-${var.environment}"
@@ -90,13 +95,15 @@ module "search_lambda" {
   iam_role_arn     = module.search_iam.role_arn
   source_code_path = data.archive_file.search_by_label_lambda.output_path
   source_code_hash = data.archive_file.search_by_label_lambda.output_base64sha256
-  sqs_queue_arn    = null
+  
+  # Ensure this is null for the search lambda
+  sqs_queue_arn    = null 
+  
   environment_variables = {
     DYNAMODB_TABLE_NAME = module.dynamodb.table_name
   }
   tags = var.common_tags
 }
-
 # ------------------------------------------------------------------------------
 # API GATEWAY MODULE
 # ------------------------------------------------------------------------------
