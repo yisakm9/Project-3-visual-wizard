@@ -11,3 +11,8 @@ output "queue_arn" {
 output "queue_url" {
   value = aws_sqs_queue.image_processing_queue.id
 }
+
+output "dlq_arn" {
+  description = "The ARN of the Dead-Letter Queue."
+  value       = aws_sqs_queue.dlq.arn
+}

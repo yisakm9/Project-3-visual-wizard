@@ -1,13 +1,30 @@
 # main.tf for SQS
 
-# Creates the SQS queue for image processing notifications
+# Creates the Dead-Letter Queue (DLQ) to hold failed messages
+resource "aws_sqs_queue" "dlq" {
+  name = "${var.queue_name}-dlq"
+
+  tags = {
+    Name        = "${var.queue_name}-dlq"
+    Project     = "Visual-Wizard"
+    Environment = var.environment
+  }
+}
+
+# Creates the main SQS queue for image processing notifications
 resource "aws_sqs_queue" "image_processing_queue" {
   name                       = var.queue_name
   delay_seconds              = 0
   max_message_size           = 262144
   message_retention_seconds  = 86400 # 1 day
   receive_wait_time_seconds  = 10
-  visibility_timeout_seconds = 300   # 5 minutes, allowing ample time for the Lambda to process
+  visibility_timeout_seconds = 300   # 5 minutes
+
+  # Configure the redrive policy to use the DLQ
+  redrive_policy = jsonencode({
+    deadLetterTargetArn = aws_sqs_queue.dlq.arn
+    maxReceiveCount     = 3 # After 3 failed attempts, send to DLQ
+  })
 
   tags = {
     Name        = var.queue_name

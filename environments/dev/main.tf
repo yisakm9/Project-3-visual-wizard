@@ -1,42 +1,30 @@
 # main.tf for dev environment
 
-# DynamoDB Module for image labels table
+# --- EXISTING RESOURCES (NO CHANGES) ---
 module "dynamodb" {
   source      = "../../modules/dynamodb"
   table_name  = "${var.project_name}-image-labels-${var.environment}"
   environment = var.environment
 }
-
-# SQS Module for image processing queue
-# This module depends on the S3 bucket's ARN for its IAM policy.
 module "sqs" {
   source        = "../../modules/sqs"
   queue_name    = "${var.project_name}-image-processing-queue-${var.environment}"
   environment   = var.environment
   s3_bucket_arn = module.s3.bucket_arn
 }
-
-# S3 Module for image storage
-# This module depends on the SQS queue's ARN for its notification configuration.
 module "s3" {
   source        = "../../modules/s3"
   bucket_name   = "${var.project_name}-images-${var.environment}"
   environment   = var.environment
   sqs_queue_arn = module.sqs.queue_arn
 }
-
-# IAM Module for Lambda execution role
-# This module depends on the ARNs from the S3, SQS, and DynamoDB modules.
 module "iam" {
   source             = "../../modules/iam"
-  role_name          = "${var.project_name}-lambda-role-${var.environment}"
+  role_name          = "${var.project_name}-processing-lambda-role-${var.environment}"
   sqs_queue_arn      = module.sqs.queue_arn
   s3_bucket_arn      = module.s3.bucket_arn
   dynamodb_table_arn = module.dynamodb.table_arn
 }
-
-# Lambda Function Module for image processing
-# This module depends on the IAM role, SQS queue, and DynamoDB table.
 module "lambda_function" {
   source              = "../../modules/lambda_function"
   function_name       = "${var.project_name}-image-processor-${var.environment}"
@@ -45,7 +33,67 @@ module "lambda_function" {
   dynamodb_table_name = module.dynamodb.table_name
   source_path         = "../../src/image_processing"
   environment         = var.environment
+  depends_on          = [module.iam]
+}
 
-  # Explicitly state that this module depends on the IAM role being fully created.
-  depends_on = [module.iam]
+# --- NEW RESOURCES FOR SEARCH FUNCTIONALITY ---
+
+# Create a new IAM Role specifically for the Search Lambda
+resource "aws_iam_role" "search_lambda_role" {
+  name = "${var.project_name}-search-lambda-role-${var.environment}"
+  assume_role_policy = jsonencode({
+    Version   = "2012-10-17",
+    Statement = [{
+      Action    = "sts:AssumeRole",
+      Effect    = "Allow",
+      Principal = { Service = "lambda.amazonaws.com" }
+    }]
+  })
+}
+
+# Create and attach the policy for the Search Lambda's permissions
+resource "aws_iam_role_policy_attachment" "search_lambda_policy_attachment" {
+  role       = aws_iam_role.search_lambda_role.name
+  policy_arn = aws_iam_policy.search_lambda_permissions.arn
+}
+
+resource "aws_iam_policy" "search_lambda_permissions" {
+  name   = "${var.project_name}-search-lambda-policy-${var.environment}"
+  policy = jsonencode({
+    Version   = "2012-10-17",
+    Statement = [
+      {
+        Action   = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"],
+        Effect   = "Allow",
+        Resource = "arn:aws:logs:*:*:*"
+      },
+      {
+        Action   = ["dynamodb:Scan"],
+        Effect   = "Allow",
+        Resource = module.dynamodb.table_arn
+      }
+    ]
+  })
+}
+
+# Create the Search Lambda function by instantiating the module again
+module "search_lambda_function" {
+  source              = "../../modules/lambda_function"
+  function_name       = "${var.project_name}-search-by-label-${var.environment}"
+  iam_role_arn        = aws_iam_role.search_lambda_role.arn
+  dynamodb_table_name = module.dynamodb.table_name
+  source_path         = "../../src/search_by_label"
+  environment         = var.environment
+  # We don't need the SQS trigger for this one, but the variable requires a value
+  sqs_queue_arn       = module.sqs.queue_arn 
+  depends_on          = [aws_iam_role.search_lambda_role]
+}
+
+# API Gateway Module, now connected to the new Search Lambda
+module "api_gateway" {
+  source                      = "../../modules/api_gateway"
+  api_name                    = "${var.project_name}-search-api-${var.environment}"
+  environment                 = var.environment
+  search_lambda_invoke_arn    = module.search_lambda_function.function_invoke_arn # Make sure to add 'function_invoke_arn' to lambda_function outputs
+  search_lambda_function_name = module.search_lambda_function.function_name
 }
