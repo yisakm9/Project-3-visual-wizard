@@ -16,8 +16,25 @@ module "s3" {
   source        = "../../modules/s3"
   bucket_name   = "${var.project_name}-images-${var.environment}"
   environment   = var.environment
-  sqs_queue_arn = module.sqs.queue_arn
+  #sqs_queue_arn = module.sqs.queue_arn
 }
+
+# --- NEW RESOURCE TO CREATE THE S3->SQS LINK ---
+# This resource now lives in the parent module, breaking the circular dependency.
+resource "aws_s3_bucket_notification" "bucket_notification" {
+  bucket = module.s3.bucket_id # Use bucket_id from the S3 module output
+
+  queue {
+    queue_arn     = module.sqs.queue_arn
+    events        = ["s3:ObjectCreated:*"]
+    filter_prefix = "uploads/"
+  }
+
+  # This is crucial: It tells Terraform to wait until the SQS module,
+  # including its policy, is fully created before attempting to set up this notification.
+  depends_on = [module.sqs]
+}
+
 module "iam" {
   source             = "../../modules/iam"
   role_name          = "${var.project_name}-processing-lambda-role-${var.environment}"

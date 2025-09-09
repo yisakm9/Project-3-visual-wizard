@@ -10,7 +10,7 @@ variable "environment" {
   type        = string
 }
 
-variable "sqs_queue_arn" {
-  description = "The ARN of the SQS queue to send notifications to."
-  type        = string
-}
+#variable "sqs_queue_arn" {
+#  description = "The ARN of the SQS queue to send notifications to."
+#  type        = string
+#}
