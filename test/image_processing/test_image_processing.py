@@ -5,7 +5,8 @@ import boto3
 from moto import mock_aws
 import os
 import urllib.parse
-from unittest.mock import patch
+# Import patch and the special DEFAULT object
+from unittest.mock import patch, DEFAULT
 
 from src.image_processing import image_processing
 
@@ -25,13 +26,21 @@ def test_successful_image_processing(monkeypatch):
             def detect_labels(self, Image, MaxLabels, MinConfidence):
                 return {"Labels": [{"Name": "Dog", "Confidence": 99.0}, {"Name": "Pet", "Confidence": 98.0}]}
 
-        # --- THIS IS THE CORRECTED LAMBDA ---
-        # It now accepts *args and **kwargs to pass them through for non-rekognition clients.
-        mock_boto_client.side_effect = lambda service_name, *args, **kwargs: \
-            MockRekognition() if service_name == 'rekognition' \
-            else boto3.client(service_name, *args, **kwargs)
+        # --- THIS IS THE CORRECTED SIDE EFFECT ---
+        # This function will be called every time boto3.client is called.
+        def boto_client_side_effect(service_name, *args, **kwargs):
+            if service_name == 'rekognition':
+                # If the code asks for a Rekognition client, return our custom mock.
+                return MockRekognition()
+            # For any other service (like 's3'), return DEFAULT.
+            # This tells the patch to call the ORIGINAL boto3.client function.
+            return DEFAULT
 
-        # The @mock_aws decorator will handle mocking the underlying services for these clients.
+        mock_boto_client.side_effect = boto_client_side_effect
+
+        # Now, when boto3.client("s3",...) is called, the side effect will return DEFAULT,
+        # which then calls the original boto3.client. Moto's @mock_aws decorator
+        # intercepts that *original* call and returns a mocked S3 client.
         s3_client = boto3.client("s3", region_name="us-east-1")
         dynamodb = boto3.resource("dynamodb", region_name="us-east-1")
         
@@ -60,7 +69,7 @@ def test_successful_image_processing(monkeypatch):
           "Records": [{"s3": {"bucket": {"name": bucket_name}, "object": {"key": encoded_image_key}}}]
         }
 
-        # 2. ACT: Call the handler. It will now create its own clients, which will be intercepted by our patch.
+        # 2. ACT: Call the handler.
         result = image_processing.handler(s3_event, {})
 
     # 3. ASSERT: Verify the outcome
