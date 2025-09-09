@@ -9,7 +9,7 @@ import urllib.parse
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-# Initialize clients at the global scope for reuse between invocations
+# Initialize clients  at the global scope for reuse between invocations
 rekognition_client = boto3.client('rekognition')
 dynamodb = boto3.resource('dynamodb')
 
