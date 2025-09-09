@@ -33,6 +33,7 @@ module "lambda_function" {
   dynamodb_table_name = module.dynamodb.table_name
   source_path         = "../../src/image_processing"
   environment         = var.environment
+  create_sqs_trigger  = true
   depends_on          = [module.iam]
 }
 
@@ -84,8 +85,9 @@ module "search_lambda_function" {
   dynamodb_table_name = module.dynamodb.table_name
   source_path         = "../../src/search_by_label"
   environment         = var.environment
+  create_sqs_trigger  = false
   # We don't need the SQS trigger for this one, but the variable requires a value
-  sqs_queue_arn       = module.sqs.queue_arn 
+  #sqs_queue_arn       = module.sqs.queue_arn 
   depends_on          = [aws_iam_role.search_lambda_role]
 }
 

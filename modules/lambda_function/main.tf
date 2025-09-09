@@ -33,8 +33,11 @@ resource "aws_lambda_function" "image_processing_lambda" {
   }
 }
 
+# --- USE 'count' TO MAKE THIS RESOURCE OPTIONAL ---
 # Creates the event source mapping between SQS and Lambda
 resource "aws_lambda_event_source_mapping" "sqs_trigger" {
+  count = var.create_sqs_trigger ? 1 : 0
+
   event_source_arn = var.sqs_queue_arn
   function_name    = aws_lambda_function.image_processing_lambda.arn
   batch_size       = 5 # Process up to 5 messages at a time

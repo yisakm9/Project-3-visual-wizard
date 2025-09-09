@@ -13,6 +13,8 @@ variable "iam_role_arn" {
 variable "sqs_queue_arn" {
   description = "The ARN of the SQS queue."
   type        = string
+  # Make this variable optional since not all functions will have an SQS trigger
+  default     = null 
 }
 
 variable "dynamodb_table_name" {
@@ -28,4 +30,11 @@ variable "source_path" {
 variable "environment" {
   description = "The environment (e.g., dev, prod)."
   type        = string
+}
+
+# --- ADD THIS NEW VARIABLE ---
+variable "create_sqs_trigger" {
+  description = "If true, creates an SQS event source mapping for the Lambda function."
+  type        = bool
+  default     = false
 }
