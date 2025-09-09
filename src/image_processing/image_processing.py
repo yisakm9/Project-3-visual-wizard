@@ -1,3 +1,5 @@
+# src/image_processing/image_processing.py
+
 import boto3
 import os
 import logging
