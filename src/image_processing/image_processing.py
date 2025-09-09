@@ -1,3 +1,5 @@
+# src/image_processing/image_processing.py
+
 import boto3
 import os
 import logging
@@ -10,15 +12,16 @@ logger.setLevel(logging.INFO)
 rekognition_client = boto3.client('rekognition')
 dynamodb = boto3.resource('dynamodb')
 
-# Get table name from environment variables
+# Get table name from environment variable
 TABLE_NAME = os.environ.get('DYNAMODB_TABLE_NAME')
 
 def handler(event, context):
     """
-    This function is triggered by an S-3 event and processes the uploaded image.
+    This function is triggered by an S3 event and processes the uploaded image.
     """
+    # --- THIS IS THE CRUCIAL FIX ---
     # Initialize the DynamoDB Table object INSIDE the handler.
-    # This is the crucial fix for testability.
+    # This allows monkeypatch to replace the 'dynamodb' resource before this line is executed.
     if not TABLE_NAME:
         raise ValueError("Environment variable DYNAMODB_TABLE_NAME is not set.")
     table = dynamodb.Table(TABLE_NAME)
