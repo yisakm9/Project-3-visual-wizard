@@ -15,9 +15,11 @@ resource "aws_lambda_function" "this" {
 }
 
 resource "aws_lambda_event_source_mapping" "this" {
-  count            = var.sqs_queue_arn != "" ? 1 : 0 # Only create if SQS ARN is provided
+  # --- FIX: Change the condition from != "" to != null ---
+  # This will correctly evaluate to '0' when sqs_queue_arn is null.
+  count = var.sqs_queue_arn != null ? 1 : 0
+
   event_source_arn = var.sqs_queue_arn
   function_name    = aws_lambda_function.this.arn
   batch_size       = 1
 }
-

@@ -1,19 +1,3 @@
-output "s3_bucket_name" {
-  description = "The name of the S3 bucket where images should be uploaded."
-  value       = module.s3.bucket_name
-}
-
-output "sqs_queue_url" {
-  description = "The URL of the SQS queue that receives notifications."
-  value       = module.sqs.queue_url
-}
-
-output "dynamodb_table_name" {
-  description = "The name of the DynamoDB table storing image labels."
-  value       = module.dynamodb.table_name
-}
-
-
 output "s3_upload_bucket_name" {
   description = "The name of the S3 bucket where new images should be uploaded."
   value       = module.s3.bucket_name
@@ -24,7 +8,10 @@ output "api_search_url_example" {
   value       = "${module.api_gateway.api_endpoint}/search?label=car"
 }
 
-
+output "dynamodb_table_name" {
+  description = "The name of the DynamoDB table storing image labels and metadata."
+  value       = module.dynamodb.table_name
+}
 
 output "image_processing_lambda_function_name" {
   description = "The name of the Lambda function that processes uploaded images."
