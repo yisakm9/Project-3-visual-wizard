@@ -121,7 +121,7 @@ module "search_lambda" {
   iam_role_arn     = module.search_iam.role_arn
   source_code_path = data.archive_file.search_by_label_lambda.output_path
   source_code_hash = data.archive_file.search_by_label_lambda.output_base64sha256
-  
+  api_gateway_execution_arn = module.api_gateway.execution_arn
   # Ensure this is null for the search lambda
   sqs_queue_arn    = null 
   

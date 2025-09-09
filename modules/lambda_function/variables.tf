@@ -44,3 +44,11 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+# ... (all existing variables remain)
+
+variable "api_gateway_execution_arn" {
+  description = "The execution ARN of the API Gateway that will trigger this function."
+  type        = string
+  default     = null # This is an optional variable
+}
