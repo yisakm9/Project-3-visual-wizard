@@ -1,0 +1,61 @@
+name: "Deploy Dev Infrastructure"
+
+# 1. Controls when the action will run.
+on:
+  # Triggers the workflow on push events but only for the "main" branch
+  push:
+    branches:
+      - master
+    
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# 2. A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  deploy-dev:
+    name: "Deploy to Dev Environment"
+    runs-on: ubuntu-latest
+    
+    # These permissions are needed for OIDC, but it's good practice to have them
+    permissions:
+      contents: read
+      id-token: write
+
+    # The directory where the terraform commands will be executed
+    defaults:
+      run:
+        working-directory: ./environments/dev
+
+    steps:
+      # 3. Checks out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - name: "Checkout"
+        uses: actions/checkout@v4
+
+      # 4. Configures AWS credentials from the GitHub secrets
+      - name: "Configure AWS Credentials"
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::456202167790:role/githubaction #  IAM ROLE ARN
+          aws-region: us-east-1 # Must match the region in your backend.tf
+
+      # 5. Installs the specific version of Terraform CLI
+      - name: "Setup Terraform"
+        uses: hashicorp/setup-terraform@v3
+
+      # 6. Initializes a new or existing Terraform working directory by creating initial files, 
+      #    loading any remote state, and downloading modules.
+      - name: "Terraform Init"
+        id: init
+        run: terraform init
+
+      # 7. Generates an execution plan for Terraform, showing what actions will be taken.
+      #    A plan file is saved for the 'apply' step to ensure only the planned actions are executed.
+      - name: "Terraform Plan"
+        id: plan
+        run: terraform plan -out=tfplan
+
+      # 8. Applies the changes required to reach the desired state of the configuration.
+      #    The -auto-approve flag is used for non-interactive execution in CI/CD.
+      - name: "Terraform Apply"
+        id: apply
+        run: terraform apply -auto-approve tfplan
