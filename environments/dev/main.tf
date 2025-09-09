@@ -121,7 +121,7 @@ module "search_lambda" {
   iam_role_arn     = module.search_iam.role_arn
   source_code_path = data.archive_file.search_by_label_lambda.output_path
   source_code_hash = data.archive_file.search_by_label_lambda.output_base64sha256
-  api_gateway_execution_arn = module.api_gateway.execution_arn
+  
   # Ensure this is null for the search lambda
   sqs_queue_arn    = null 
   
@@ -139,4 +139,17 @@ module "api_gateway" {
   api_name                 = "${var.project_name}-api-${var.environment}"
   search_lambda_invoke_arn = module.search_lambda.function_invoke_arn
   tags                     = var.common_tags
+}
+
+
+# --- FIX: CREATE THE LAMBDA PERMISSION EXPLICITLY HERE ---
+# This is the final connector resource that breaks the cycle.
+resource "aws_lambda_permission" "allow_api_gateway_to_invoke_search" {
+  statement_id  = "AllowAPIGatewayInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = module.search_lambda.function_name
+  principal     = "apigateway.amazonaws.com"
+
+  # This explicitly depends on both modules, creating a clear order.
+  source_arn = "${module.api_gateway.execution_arn}/*/*"
 }
