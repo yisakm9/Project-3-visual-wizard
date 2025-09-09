@@ -90,3 +90,22 @@ locals {
     ManagedBy   = "Terraform"
   }
 }
+
+
+# This resource creates the policy that allows S3 to call our Lambda.
+resource "aws_lambda_permission" "allow_s3_invoke" {
+  statement_id  = "AllowExecutionFromS3Bucket"
+  action        = "lambda:InvokeFunction"
+  function_name = module.image_processing_lambda.lambda_function_name
+  principal     = "s3.amazonaws.com"
+  source_arn    = module.s3.s3_bucket_arn
+
+  # HARDENING: Add an explicit depends_on block.
+  # While Terraform infers this dependency, making it explicit ensures that
+  # both the S3 bucket and the Lambda function must exist before this
+  # permission is created.
+  depends_on = [
+    module.s3,
+    module.image_processing_lambda
+  ]
+}
