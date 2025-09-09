@@ -5,10 +5,10 @@ name: 'Terraform CI/CD for Dev'
 on:
   push:
     branches:
-      - master
+      - master 
   pull_request:
     branches:
-      - master
+      - master 
   workflow_dispatch:
 
 permissions:
@@ -45,20 +45,29 @@ jobs:
       - name: 'Install Python Test Dependencies'
         run: pip install -r requirements-dev.txt
       
+      # --- THIS IS THE CORRECTED STEP ---
       - name: 'Run Pytest Unit Tests'
+        env:
+          DYNAMODB_TABLE_NAME: "mock-table-for-testing"
+          DYNAMODB_INDEX_NAME: "mock-index-for-testing"
+          # Add the project root to the PYTHONPATH so imports from 'src' work correctly.
+          PYTHONPATH: "." 
         run: pytest test/
+
+      - name: 'Create Lambda Deployment Packages'
+        run: |
+          (cd src/image_processing && zip -r ../../environments/dev/image-processing.zip .)
+          (cd src/search_by_label && zip -r ../../environments/dev/search-by-label.zip .)
 
       - name: 'Set up Terraform'
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.13.1 # Standardize version
+          terraform_version:  1.13.1 #
 
       - name: 'Install TFLint for Terraform Linting'
         uses: terraform-linters/setup-tflint@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          tflint_version: latest
-
       - name: 'Run TFLint'
         run: tflint --recursive
         
@@ -92,46 +101,33 @@ jobs:
           echo "$COMMENT_BODY" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
-      # --- THIS IS THE CORRECTED STEP ---
       - name: 'Post Plan to Pull Request'
         if: github.event_name == 'pull_request'
         uses: actions/github-script@v7
-        env:
-          # Pass the complex string as an environment variable
-          PLAN_COMMENT: ${{ steps.format-plan.outputs.comment_body }}
+        env: { PLAN_COMMENT: '${{ steps.format-plan.outputs.comment_body }}' }
         with:
           script: |
-            // Read the comment body from the environment variable
             const newBody = process.env.PLAN_COMMENT;
-
             const { data: comments } = await github.rest.issues.listComments({ owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number });
             const botComment = comments.find(comment => comment.user.login === 'github-actions[bot]' && comment.body.includes('Terraform Plan for Dev Environment'));
+            if (botComment) { await github.rest.issues.updateComment({ owner: context.repo.owner, repo: context.repo.repo, comment_id: botComment.id, body: newBody }); }
+            else { await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, body: newBody }); }
 
-            if (botComment) {
-              await github.rest.issues.updateComment({ owner: context.repo.owner, repo: context.repo.repo, comment_id: botComment.id, body: newBody });
-            } else {
-              await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, body: newBody });
-            }
-
-      - name: 'Upload Terraform Plan Artifact'
+      - name: 'Upload Terraform and Lambda Artifacts'
         uses: actions/upload-artifact@v4
         with:
-          name: tfplan-dev
-          path: ${{ env.TF_WORKING_DIR }}/tfplan
-          retention-days: 1
-          
-      - name: 'Upload Source Code Artifact'
-        uses: actions/upload-artifact@v4
-        with:
-          name: source-code-dev
-          path: src/
+          name: build-artifacts-dev
+          path: |
+            ${{ env.TF_WORKING_DIR }}/tfplan
+            ${{ env.TF_WORKING_DIR }}/image-processing.zip
+            ${{ env.TF_WORKING_DIR }}/search-by-label.zip
           retention-days: 1
 
   deploy_to_dev:
     name: 'Deploy to Dev'
     runs-on: ubuntu-latest
     needs: validate_and_plan
-    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push' # Change 'main' to 'master' if needed
     environment: dev
 
     env:
@@ -152,20 +148,14 @@ jobs:
       - name: 'Set up Terraform'
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.13.1 # Standardize version
+          terraform_version:  1.13.1 #
       
-      - name: 'Download Terraform Plan Artifact'
+      - name: 'Download Build Artifacts'
         uses: actions/download-artifact@v4
         with:
-          name: tfplan-dev
+          name: build-artifacts-dev
           path: ${{ env.TF_WORKING_DIR }}
-
-      - name: 'Download Source Code Artifact'
-        uses: actions/download-artifact@v4
-        with:
-          name: source-code-dev
-          path: src/
-
+        
       - name: 'Terraform Init'
         run: terraform -chdir="${{ env.TF_WORKING_DIR }}" init -backend-config="bucket=${{ secrets.TF_STATE_BUCKET_DEV }}"
         

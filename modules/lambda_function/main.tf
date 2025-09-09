@@ -1,11 +1,6 @@
 # modules/lambda_function/main.tf
 
 # Data source to create a ZIP archive of the Python source code.
-data "archive_file" "lambda_zip" {
-  type        = "zip"
-  source_dir  = var.source_path
-  output_path = "${path.module}/${var.function_name}.zip"
-}
 
 # Create the Lambda function resource.
 resource "aws_lambda_function" "function" {
@@ -16,8 +11,9 @@ resource "aws_lambda_function" "function" {
   memory_size      = var.memory_size
   timeout          = var.timeout
 
-  filename         = data.archive_file.lambda_zip.output_path
-  source_code_hash = data.archive_file.lambda_zip.output_base64sha256
+  filename         = var.package_path
+
+  source_code_hash = filebase64sha256(var.package_path)
 
   environment {
     variables = var.environment_variables

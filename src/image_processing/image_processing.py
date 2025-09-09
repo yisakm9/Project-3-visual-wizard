@@ -15,15 +15,9 @@ TABLE_NAME = os.environ.get('DYNAMODB_TABLE_NAME')
 
 def handler(event, context):
     """
-    This function is triggered by an S3 event and processes the uploaded image.
+    This function is triggered by an S3 event. It uses Amazon Rekognition
+    to detect labels in the uploaded image and stores them in DynamoDB.
     """
-    # --- THIS IS THE CRUCIAL FIX ---
-    # Initialize the DynamoDB Table object INSIDE the handler.
-    # This allows monkeypatch to replace the 'dynamodb' resource before this line is executed.
-    if not TABLE_NAME:
-        raise ValueError("Environment variable DYNAMODB_TABLE_NAME is not set.")
-    table = dynamodb.Table(TABLE_NAME)
-
     logger.info("Received event: %s", event)
 
     bucket_name = event['Records'][0]['s3']['bucket']['name']
