@@ -48,6 +48,9 @@ jobs:
         run: pip install -r requirements-dev.txt
       
       - name: 'Run Pytest Unit Tests'
+        env:
+          DYNAMODB_TABLE_NAME: "mock-table"
+          DYNAMODB_INDEX_NAME: "mock-index"
         run: pytest test/
 
       # --- CORRECTED: Build Lambda packages BEFORE planning ---

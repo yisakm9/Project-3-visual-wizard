@@ -1,6 +1,9 @@
+# src/image_processing/image_processing.py
+
 import boto3
 import os
 import logging
+import urllib.parse # Import the urllib library
 
 # Configure logging
 logger = logging.getLogger()
@@ -24,11 +27,15 @@ def handler(event, context):
     """
     logger.info("Received event: %s", event)
 
-    # Get the bucket and key from the S3 event
+    # Get the bucket and the URL-encoded key from the S3 event
     bucket_name = event['Records'][0]['s3']['bucket']['name']
-    image_key = event['Records'][0]['s3']['object']['key']
+    encoded_image_key = event['Records'][0]['s3']['object']['key']
 
-    logger.info("Processing image '%s' from bucket '%s'.", image_key, bucket_name)
+    # --- THIS IS THE FIX ---
+    # Decode the S3 object key to handle spaces (+) and other special characters.
+    image_key = urllib.parse.unquote_plus(encoded_image_key)
+    
+    logger.info("Processing decoded image key '%s' from bucket '%s'.", image_key, bucket_name)
 
     try:
         # Call Rekognition to detect labels
@@ -36,7 +43,7 @@ def handler(event, context):
             Image={
                 'S3Object': {
                     'Bucket': bucket_name,
-                    'Name': image_key
+                    'Name': image_key # Use the decoded key
                 }
             },
             MaxLabels=10,
@@ -57,7 +64,7 @@ def handler(event, context):
                     Item={
                         'ImageKey': image_key,
                         'Label': label,
-                        'AllLabels': labels # Store the full list for context
+                        'AllLabels': labels
                     }
                 )
 
@@ -70,5 +77,4 @@ def handler(event, context):
 
     except Exception as e:
         logger.error("Error processing image %s: %s", image_key, str(e))
-        # Depending on requirements, you could add this message to a dead-letter queue (DLQ)
         raise e

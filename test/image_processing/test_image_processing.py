@@ -1,80 +1,69 @@
-# src/image_processing/image_processing.py
-
+import pytest
 import boto3
+from moto import mock_aws
 import os
-import logging
-import urllib.parse # Import the urllib library
 
-# Configure logging
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
+# Import the handler function from your source code
+from src.image_processing.image_processing import handler
 
-# Initialize AWS clients
-s3_client = boto3.client('s3')
-rekognition_client = boto3.client('rekognition')
-dynamodb = boto3.resource('dynamodb')
-
-# Get table name from environment variables
-TABLE_NAME = os.environ.get('DYNAMODB_TABLE_NAME')
-if not TABLE_NAME:
-    raise ValueError("Missing environment variable: DYNAMODB_TABLE_NAME")
-table = dynamodb.Table(TABLE_NAME)
-
-def handler(event, context):
+# This is the test for the image processing Lambda
+@mock_aws
+def test_image_processing_success(monkeypatch):
     """
-    This function is triggered by an S3 event. It uses Amazon Rekognition
-    to detect labels in the uploaded image and stores them in DynamoDB.
+    Tests the successful processing of an image.
+    - Mocks S3, Rekognition, and DynamoDB.
+    - Mocks the environment variables.
+    - Simulates an S3 event.
+    - Asserts that the function runs without error and returns a 200 status code.
     """
-    logger.info("Received event: %s", event)
+    # 1. Set up mocked environment variables using monkeypatch
+    monkeypatch.setenv("DYNAMODB_TABLE_NAME", "mock-visual-wizard-table")
 
-    # Get the bucket and the URL-encoded key from the S3 event
-    bucket_name = event['Records'][0]['s3']['bucket']['name']
-    encoded_image_key = event['Records'][0]['s3']['object']['key']
-
-    # --- THIS IS THE FIX ---
-    # Decode the S3 object key to handle spaces (+) and other special characters.
-    image_key = urllib.parse.unquote_plus(encoded_image_key)
+    # 2. Set up mocked AWS resources
+    s3_client = boto3.client("s3", region_name="us-east-1")
+    dynamodb = boto3.resource("dynamodb", region_name="us-east-1")
     
-    logger.info("Processing decoded image key '%s' from bucket '%s'.", image_key, bucket_name)
+    bucket_name = "test-bucket"
+    image_key = "test-image.jpg"
+    table_name = os.environ.get("DYNAMODB_TABLE_NAME")
 
-    try:
-        # Call Rekognition to detect labels
-        response = rekognition_client.detect_labels(
-            Image={
-                'S3Object': {
-                    'Bucket': bucket_name,
-                    'Name': image_key # Use the decoded key
-                }
+    # Create the bucket and table in the mocked environment
+    s3_client.create_bucket(Bucket=bucket_name)
+    table = dynamodb.create_table(
+        TableName=table_name,
+        KeySchema=[{'AttributeName': 'ImageKey', 'KeyType': 'HASH'}],
+        AttributeDefinitions=[{'AttributeName': 'ImageKey', 'AttributeType': 'S'}],
+        ProvisionedThroughput={'ReadCapacityUnits': 1, 'WriteCapacityUnits': 1}
+    )
+
+    # 3. Create a sample S3 event payload
+    s3_event = {
+      "Records": [
+        {
+          "s3": {
+            "bucket": {
+              "name": bucket_name
             },
-            MaxLabels=10,
-            MinConfidence=80
-        )
-
-        labels = [label['Name'] for label in response.get('Labels', [])]
-        logger.info("Detected labels: %s", labels)
-
-        if not labels:
-            logger.warning("No labels detected with sufficient confidence for image %s.", image_key)
-            return
-
-        # Store each label as a separate item in DynamoDB for the GSI to work
-        with table.batch_writer() as batch:
-            for label in labels:
-                batch.put_item(
-                    Item={
-                        'ImageKey': image_key,
-                        'Label': label,
-                        'AllLabels': labels
-                    }
-                )
-
-        logger.info("Successfully stored labels for image %s in DynamoDB.", image_key)
-
-        return {
-            'statusCode': 200,
-            'body': f'Successfully processed image {image_key} and found labels: {labels}'
+            "object": {
+              "key": image_key
+            }
+          }
         }
+      ]
+    }
 
-    except Exception as e:
-        logger.error("Error processing image %s: %s", image_key, str(e))
-        raise e
+    # 4. Call the handler function
+    # NOTE: Rekognition isn't fully supported by moto, so we can't easily check
+    # the DynamoDB output, but we can confirm the function runs without crashing.
+    # In a real-world scenario with a more complex function, you would also mock
+    # the boto3 rekognition client's response.
+    
+    result = handler(s3_event, {})
+
+    # 5. Assert the results
+    assert result['statusCode'] == 200
+    assert "Successfully processed" in result['body']
+
+# Your placeholder test for the search function
+def test_placeholder():
+    assert True
