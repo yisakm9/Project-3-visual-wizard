@@ -5,9 +5,8 @@ import boto3
 from moto import mock_aws
 import os
 import urllib.parse
-from unittest.mock import patch # We will use a different kind of mock
+from unittest.mock import patch
 
-# Import the application module
 from src.image_processing import image_processing
 
 @mock_aws
@@ -19,18 +18,20 @@ def test_successful_image_processing(monkeypatch):
     table_name = "mock-visual-wizard-table"
     monkeypatch.setenv("DYNAMODB_TABLE_NAME", table_name)
     
-    # Since Rekognition is not fully mocked by moto for this case, we use patch
-    # to intercept the boto3.client call ONLY when it asks for 'rekognition'.
+    # We use 'patch' to intercept calls to boto3.client.
     with patch('boto3.client') as mock_boto_client:
         
         class MockRekognition:
             def detect_labels(self, Image, MaxLabels, MinConfidence):
                 return {"Labels": [{"Name": "Dog", "Confidence": 99.0}, {"Name": "Pet", "Confidence": 98.0}]}
 
-        # If the code asks for a rekognition client, return our mock. Otherwise, return a real client.
-        mock_boto_client.side_effect = lambda service_name: MockRekognition() if service_name == 'rekognition' else boto3.client(service_name)
+        # --- THIS IS THE CORRECTED LAMBDA ---
+        # It now accepts *args and **kwargs to pass them through for non-rekognition clients.
+        mock_boto_client.side_effect = lambda service_name, *args, **kwargs: \
+            MockRekognition() if service_name == 'rekognition' \
+            else boto3.client(service_name, *args, **kwargs)
 
-        # The @mock_aws decorator handles mocking S3 and DynamoDB automatically.
+        # The @mock_aws decorator will handle mocking the underlying services for these clients.
         s3_client = boto3.client("s3", region_name="us-east-1")
         dynamodb = boto3.resource("dynamodb", region_name="us-east-1")
         
@@ -59,7 +60,7 @@ def test_successful_image_processing(monkeypatch):
           "Records": [{"s3": {"bucket": {"name": bucket_name}, "object": {"key": encoded_image_key}}}]
         }
 
-        # 2. ACT: Call the handler function. It will now create its own clients within the mocked context.
+        # 2. ACT: Call the handler. It will now create its own clients, which will be intercepted by our patch.
         result = image_processing.handler(s3_event, {})
 
     # 3. ASSERT: Verify the outcome
