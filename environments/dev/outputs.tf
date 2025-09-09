@@ -13,21 +13,6 @@ output "dynamodb_table_name" {
   value       = module.dynamodb.table_name
 }
 
-output "lambda_function_name" {
-  description = "The name of the image processing Lambda function."
-  value       = module.lambda_function.function_name # Note: Need to add 'function_name' to lambda outputs
-}
-
-output "lambda_function_arn" {
-  description = "The ARN of the image processing Lambda function."
-  value       = module.lambda_function.function_arn
-}
-
-output "iam_role_arn" {
-  description = "The ARN of the IAM role used by the Lambda function."
-  value       = module.iam.role_arn
-}
-
 
 output "s3_upload_bucket_name" {
   description = "The name of the S3 bucket where new images should be uploaded."
