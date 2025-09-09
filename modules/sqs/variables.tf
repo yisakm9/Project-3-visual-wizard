@@ -3,10 +3,7 @@ variable "queue_name" {
   type        = string
 }
 
-variable "s3_bucket_name" {
-  description = "The name of the S3 bucket that will send notifications to this queue."
-  type        = string
-}
+
 
 variable "delay_seconds" {
   description = "The time in seconds that the delivery of all messages in the queue will be delayed."

@@ -28,8 +28,33 @@ module "s3" {
 module "sqs" {
   source         = "../../modules/sqs"
   queue_name     = "${var.project_name}-queue-${var.environment}"
-  s3_bucket_name = module.s3.bucket_name
   tags           = var.common_tags
+}
+
+
+# --- FIX: CREATE THE SQS POLICY EXPLICITLY HERE ---
+# This resource breaks the circular dependency.
+resource "aws_sqs_queue_policy" "s3_notification_policy" {
+  queue_url = module.sqs.queue_url
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Principal = {
+          Service = "s3.amazonaws.com"
+        },
+        Action   = "SQS:SendMessage",
+        Resource = module.sqs.queue_arn,
+        Condition = {
+          ArnEquals = {
+            "aws:SourceArn" = module.s3.bucket_arn
+          }
+        }
+      }
+    ]
+  })
 }
 
 module "dynamodb" {
