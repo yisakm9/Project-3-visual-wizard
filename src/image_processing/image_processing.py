@@ -19,7 +19,7 @@ def handler(event, context):
     """
     # --- THIS IS THE CRUCIAL FIX ---
     # Initialize the DynamoDB Table object INSIDE the handler.
-    # This ensures that in a test environment, it uses the monkeypatched 'dynamodb' resource.
+    # This allows monkeypatch to replace the 'dynamodb' resource before this line is executed.
     if not TABLE_NAME:
         raise ValueError("Environment variable DYNAMODB_TABLE_NAME is not set.")
     table = dynamodb.Table(TABLE_NAME)
