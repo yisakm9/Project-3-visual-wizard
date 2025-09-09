@@ -33,44 +33,30 @@ module "sqs" {
 
 # --- FIX 1: Create the S3 Bucket Notification EXPLICITLY HERE ---
 resource "aws_s3_bucket_notification" "image_uploads" {
-  # Depends explicitly on the bucket from the S3 module
-  bucket = module.s3.bucket_id # Use bucket_id for dependency
+  bucket = module.s3.bucket_id
 
-  # Depends explicitly on the queue ARN from the SQS module
   queue {
     queue_arn     = module.sqs.queue_arn
     events        = ["s3:ObjectCreated:*"]
     filter_prefix = "uploads/"
   }
-
-  # This ensures the SQS policy is created before the notification is attached
   depends_on = [aws_sqs_queue_policy.s3_notification_policy]
 }
 
-# --- FIX: CREATE THE SQS POLICY EXPLICITLY HERE ---
-# This resource breaks the circular dependency.
 resource "aws_sqs_queue_policy" "s3_notification_policy" {
   queue_url = module.sqs.queue_url
-
-  policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [
-      {
-        Effect = "Allow",
-        Principal = {
-          Service = "s3.amazonaws.com"
-        },
-        Action   = "SQS:SendMessage",
-        Resource = module.sqs.queue_arn,
-        Condition = {
-          ArnEquals = {
-            "aws:SourceArn" = module.s3.bucket_arn
-          }
-        }
-      }
-    ]
+  policy    = jsonencode({
+    Version   = "2012-10-17",
+    Statement = [{
+      Effect    = "Allow",
+      Principal = { Service = "s3.amazonaws.com" },
+      Action    = "SQS:SendMessage",
+      Resource  = module.sqs.queue_arn,
+      Condition = { ArnEquals = { "aws:SourceArn" = module.s3.bucket_arn } }
+    }]
   })
 }
+
 
 module "dynamodb" {
   source     = "../../modules/dynamodb"
