@@ -49,8 +49,8 @@ jobs:
       
       - name: 'Run Pytest Unit Tests'
         env:
-          DYNAMODB_TABLE_NAME: "mock-table"
-          DYNAMODB_INDEX_NAME: "mock-index"
+          DYNAMODB_TABLE_NAME: "mock-table-for-testing"
+          DYNAMODB_INDEX_NAME: "mock-index-for-testing"
         run: pytest test/
 
       # --- CORRECTED: Build Lambda packages BEFORE planning ---
