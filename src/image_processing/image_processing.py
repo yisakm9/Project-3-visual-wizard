@@ -3,49 +3,42 @@
 import boto3
 import os
 import logging
-import urllib.parse # Import the urllib library
+import urllib.parse
 
 # Configure logging
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-# Initialize AWS clients
-s3_client = boto3.client('s3')
+# Initialize clients at the global scope for reuse between invocations
 rekognition_client = boto3.client('rekognition')
 dynamodb = boto3.resource('dynamodb')
 
 # Get table name from environment variables
 TABLE_NAME = os.environ.get('DYNAMODB_TABLE_NAME')
-if not TABLE_NAME:
-    raise ValueError("Missing environment variable: DYNAMODB_TABLE_NAME")
-table = dynamodb.Table(TABLE_NAME)
 
 def handler(event, context):
     """
     This function is triggered by an S3 event. It uses Amazon Rekognition
     to detect labels in the uploaded image and stores them in DynamoDB.
     """
+    # --- THIS IS THE FIX ---
+    # Initialize the DynamoDB Table object inside the handler.
+    # This ensures that in a test environment, it uses the monkeypatched 'dynamodb' resource.
+    if not TABLE_NAME:
+        raise ValueError("Environment variable DYNAMODB_TABLE_NAME is not set.")
+    table = dynamodb.Table(TABLE_NAME)
+
     logger.info("Received event: %s", event)
 
-    # Get the bucket and the URL-encoded key from the S3 event
     bucket_name = event['Records'][0]['s3']['bucket']['name']
     encoded_image_key = event['Records'][0]['s3']['object']['key']
-
-    # --- THIS IS THE FIX ---
-    # Decode the S3 object key to handle spaces (+) and other special characters.
     image_key = urllib.parse.unquote_plus(encoded_image_key)
     
     logger.info("Processing decoded image key '%s' from bucket '%s'.", image_key, bucket_name)
 
     try:
-        # Call Rekognition to detect labels
         response = rekognition_client.detect_labels(
-            Image={
-                'S3Object': {
-                    'Bucket': bucket_name,
-                    'Name': image_key # Use the decoded key
-                }
-            },
+            Image={'S3Object': {'Bucket': bucket_name, 'Name': image_key}},
             MaxLabels=10,
             MinConfidence=80
         )
@@ -54,10 +47,9 @@ def handler(event, context):
         logger.info("Detected labels: %s", labels)
 
         if not labels:
-            logger.warning("No labels detected with sufficient confidence for image %s.", image_key)
-            return
+            logger.warning("No labels detected for image %s.", image_key)
+            return { 'statusCode': 200, 'body': f'No labels found for {image_key}' }
 
-        # Store each label as a separate item in DynamoDB for the GSI to work
         with table.batch_writer() as batch:
             for label in labels:
                 batch.put_item(
