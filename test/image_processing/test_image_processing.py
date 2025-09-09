@@ -57,4 +57,5 @@ def test_successful_image_processing(monkeypatch):
     ddb_items = table.scan()['Items']
     assert len(ddb_items) == 2
     assert ddb_items[0]['ImageKey'] == original_image_key
+
     
