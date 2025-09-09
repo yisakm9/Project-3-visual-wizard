@@ -1,5 +1,3 @@
-# src/image_processing/image_processing.py
-
 import boto3
 import os
 import logging
@@ -8,16 +6,20 @@ import urllib.parse
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-# Initialize clients globally for reuse
+# Initialize clients at the global scope for reuse between Lambda invocations
 rekognition_client = boto3.client('rekognition')
 dynamodb = boto3.resource('dynamodb')
 
+# Get table name from environment variable
 TABLE_NAME = os.environ.get('DYNAMODB_TABLE_NAME')
 
 def handler(event, context):
     """
     This function is triggered by an S3 event and processes the uploaded image.
     """
+    # --- THIS IS THE CRUCIAL FIX ---
+    # Initialize the DynamoDB Table object INSIDE the handler.
+    # This allows monkeypatch to replace the 'dynamodb' resource before this line is executed.
     if not TABLE_NAME:
         raise ValueError("Environment variable DYNAMODB_TABLE_NAME is not set.")
     table = dynamodb.Table(TABLE_NAME)
@@ -43,18 +45,15 @@ def handler(event, context):
             logger.warning("No labels detected for image %s.", image_key)
             return {'statusCode': 200, 'body': f'No labels found for {image_key}'}
 
-        # --- THIS IS THE FINAL FIX ---
-        # Replace the batch_writer with a simple loop.
-        # This is more compatible with moto's mocking and has no significant
-        # performance impact for a small number of items.
-        for label in labels:
-            table.put_item(
-                Item={
-                    'ImageKey': image_key,
-                    'Label': label,
-                    'AllLabels': labels
-                }
-            )
+        with table.batch_writer() as batch:
+            for label in labels:
+                batch.put_item(
+                    Item={
+                        'ImageKey': image_key,
+                        'Label': label,
+                        'AllLabels': labels
+                    }
+                )
 
         logger.info("Successfully stored labels for image %s in DynamoDB.", image_key)
         return {
