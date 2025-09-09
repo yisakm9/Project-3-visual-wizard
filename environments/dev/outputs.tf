@@ -15,12 +15,17 @@ output "dynamodb_table_name" {
   value       = module.dynamodb.table_name
 }
 
-output "lambda_function_name" {
+output "image_processing_lambda_name" {
   description = "The name of the image processing Lambda function."
   value       = module.lambda_function.function_name
 }
 
-output "iam_role_arn" {
-  description = "The ARN of the IAM role used by the Lambda function."
-  value       = module.iam.role_arn
+output "search_lambda_name" {
+  description = "The name of the search Lambda function."
+  value       = module.search_lambda_function.function_name
+}
+
+output "api_search_endpoint_url" {
+  description = "The full URL for the image search endpoint."
+  value       = "${module.api_gateway.api_invoke_url}/search"
 }
