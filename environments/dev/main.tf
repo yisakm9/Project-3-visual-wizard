@@ -2,12 +2,13 @@ module "image_bucket" {
   source = "../../modules/s3"
 
   bucket_name = var.image_bucket_name
+  sqs_queue_arn_for_notifications = module.image_processing_queue.queue_arn
+
   tags = {
     Project     = "VisualWizard"
     Environment = "Dev"
   }
 }
-
 module "labels_table" {
   source = "../../modules/dynamodb"
 
@@ -21,6 +22,16 @@ module "labels_table" {
   }
 }
 
+
+module "image_processing_queue" {
+  source = "../../modules/sqs"
+
+  queue_name = "visual-wizard-image-processing-queue-dev"
+  tags = {
+    Project     = "VisualWizard"
+    Environment = "Dev"
+  }
+}
 # --- IAM RESOURCES FOR IMAGE PROCESSING LAMBDA ---
 
 # 1. Create the role using our simplified module
@@ -47,6 +58,14 @@ data "aws_iam_policy_document" "image_processing_lambda_policy_doc" {
   statement {
     actions   = ["dynamodb:PutItem"]
     resources = [module.labels_table.table_arn]
+  }
+  statement {
+    actions = [
+      "sqs:ReceiveMessage",
+      "sqs:DeleteMessage",
+      "sqs:GetQueueAttributes"
+    ]
+    resources = [module.image_processing_queue.queue_arn]
   }
 }
 

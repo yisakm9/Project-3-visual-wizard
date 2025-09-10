@@ -8,3 +8,9 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "sqs_queue_arn_for_notifications" {
+  description = "The ARN of the SQS queue to send notifications to."
+  type        = string
+  default     = null
+}

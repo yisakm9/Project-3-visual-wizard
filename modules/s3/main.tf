@@ -26,3 +26,23 @@ resource "aws_s3_bucket_public_access_block" "this" {
   ignore_public_acls      = true
   restrict_public_buckets = true
 }
+
+
+resource "aws_s3_bucket_notification" "this" {
+  # Create this notification only if a queue ARN is provided
+  count = var.sqs_queue_arn_for_notifications != null ? 1 : 0
+
+  bucket = aws_s3_bucket.this.id
+
+  queue {
+    queue_arn     = var.sqs_queue_arn_for_notifications
+    events        = ["s3:ObjectCreated:*"]
+    filter_suffix = ".jpg"
+  }
+
+  queue {
+    queue_arn     = var.sqs_queue_arn_for_notifications
+    events        = ["s3:ObjectCreated:*"]
+    filter_suffix = ".png"
+  }
+}
