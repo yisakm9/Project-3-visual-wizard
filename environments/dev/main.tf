@@ -208,7 +208,7 @@ module "search_by_label_lambda" {
   tags = { Project = "VisualWizard", Environment = "Dev" }
 }
 
-# --- API GATEWAY MODULE ---
+#  API GATEWAY MODULE 
 
 module "search_api" {
   source = "../../modules/api_gateway"
