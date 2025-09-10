@@ -3,9 +3,16 @@ variable "role_name" {
   type        = string
 }
 
-variable "policy_arn" {
-  description = "The ARN of the IAM policy to attach to the role."
+variable "custom_policy_document" {
+  description = "A custom IAM policy document in JSON format."
   type        = string
+  default     = null
+}
+
+variable "managed_policy_arns" {
+  description = "A list of ARNs for AWS managed policies to attach."
+  type        = list(string)
+  default     = []
 }
 
 variable "tags" {
