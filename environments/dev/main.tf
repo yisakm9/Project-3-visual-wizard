@@ -1,14 +1,15 @@
+# --- S3 BUCKET MODULE ---
 module "image_bucket" {
   source = "../../modules/s3"
 
   bucket_name = var.image_bucket_name
-  sqs_queue_arn_for_notifications = module.image_processing_queue.queue_arn
-
   tags = {
     Project     = "VisualWizard"
     Environment = "Dev"
   }
 }
+
+# --- DYNAMODB TABLE MODULE ---
 module "labels_table" {
   source = "../../modules/dynamodb"
 
@@ -22,7 +23,7 @@ module "labels_table" {
   }
 }
 
-
+# --- SQS QUEUE MODULE ---
 module "image_processing_queue" {
   source = "../../modules/sqs"
 
@@ -32,12 +33,30 @@ module "image_processing_queue" {
     Environment = "Dev"
   }
 }
+
+# --- S3 BUCKET NOTIFICATION RESOURCE ---
+# This resource links the S3 bucket to the SQS queue directly.
+resource "aws_s3_bucket_notification" "bucket_notification" {
+  bucket = module.image_bucket.bucket_name
+
+  queue {
+    queue_arn     = module.image_processing_queue.queue_arn
+    events        = ["s3:ObjectCreated:*"]
+    filter_suffix = ".jpg"
+  }
+
+  queue {
+    queue_arn     = module.image_processing_queue.queue_arn
+    events        = ["s3:ObjectCreated:*"]
+    filter_suffix = ".png"
+  }
+}
+
+
 # --- IAM RESOURCES FOR IMAGE PROCESSING LAMBDA ---
 
-# 1. Create the role using our simplified module
 module "image_processing_lambda_iam_role" {
   source = "../../modules/iam"
-
   role_name = "visual-wizard-image-processing-role-dev"
   tags = {
     Project     = "VisualWizard"
@@ -45,7 +64,6 @@ module "image_processing_lambda_iam_role" {
   }
 }
 
-# 2. Define the policy content, which depends on the bucket and table modules
 data "aws_iam_policy_document" "image_processing_lambda_policy_doc" {
   statement {
     actions   = ["s3:GetObject"]
@@ -60,28 +78,21 @@ data "aws_iam_policy_document" "image_processing_lambda_policy_doc" {
     resources = [module.labels_table.table_arn]
   }
   statement {
-    actions = [
-      "sqs:ReceiveMessage",
-      "sqs:DeleteMessage",
-      "sqs:GetQueueAttributes"
-    ]
+    actions   = ["sqs:ReceiveMessage", "sqs:DeleteMessage", "sqs:GetQueueAttributes"]
     resources = [module.image_processing_queue.queue_arn]
   }
 }
 
-# 3. Create a standalone, managed IAM policy from the document
 resource "aws_iam_policy" "image_processing_policy" {
   name   = "visual-wizard-image-processing-policy-dev"
   policy = data.aws_iam_policy_document.image_processing_lambda_policy_doc.json
 }
 
-# 4. Attach our new custom policy to the role
 resource "aws_iam_role_policy_attachment" "custom" {
   role       = module.image_processing_lambda_iam_role.role_name
   policy_arn = aws_iam_policy.image_processing_policy.arn
 }
 
-# 5. Attach the AWS-managed basic execution policy to the role
 resource "aws_iam_role_policy_attachment" "basic_execution" {
   role       = module.image_processing_lambda_iam_role.role_name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
