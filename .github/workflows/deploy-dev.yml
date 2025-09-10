@@ -40,21 +40,19 @@ jobs:
         with:
           python-version: '3.9'
       
-      - name: 'Install Python Test Dependencies'
-        run: pip install -r requirements-dev.txt
-      
-      # --- THIS IS THE CORRECTED STEP ---
-      - name: 'Run Pytest Unit Tests'
+      - name: 'Install Dependencies and Run Pytest'
         env:
           LABELS_TABLE_NAME: "mock-table-for-testing"
           GSI_NAME: "mock-index-for-testing"
           PYTHONPATH: "." 
-        run: python -m pytest test/
+        run: |
+          pip install -r requirements-dev.txt
+          python -m pytest test/
 
       - name: 'Set up Terraform'
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version:  1.13.1 
+          terraform_version: 1.13.1
 
       - name: 'Install TFLint for Terraform Linting'
         uses: terraform-linters/setup-tflint@v3
@@ -138,7 +136,7 @@ jobs:
       - name: 'Set up Terraform'
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version:  1.13.1 
+          terraform_version: 1.13.1
       
       - name: 'Download Terraform Plan Artifact'
         uses: actions/download-artifact@v4
