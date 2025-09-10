@@ -100,3 +100,30 @@ resource "aws_iam_role_policy_attachment" "basic_execution" {
   role       = module.image_processing_lambda_iam_role.role_name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
+
+
+# --- ADD THE LAMBDA FUNCTION MODULE ---
+module "image_processing_lambda" {
+  source = "../../modules/lambda_function"
+
+  function_name = "visual-wizard-image-processing-dev"
+  handler       = "image_processing.handler"
+  runtime       = "python3.9"
+  source_path   = "../../src/image_processing"
+
+  iam_role_arn = module.image_processing_lambda_iam_role.role_arn
+  
+  environment_variables = {
+    LABELS_TABLE_NAME = module.labels_table.table_name
+  }
+  tags = {
+    Project     = "VisualWizard"
+    Environment = "Dev"
+  }
+}
+
+# --- ADD THE SQS/LAMBDA TRIGGER ---
+resource "aws_lambda_event_source_mapping" "sqs_trigger" {
+  event_source_arn = module.image_processing_queue.queue_arn
+  function_name    = module.image_processing_lambda.function_arn
+}
