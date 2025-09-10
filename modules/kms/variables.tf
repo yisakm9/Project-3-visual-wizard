@@ -20,3 +20,11 @@ variable "s3_source_bucket_arn" {
   type        = string
   default     = null
 }
+
+variable "lambda_role_arns_for_decrypt" {
+  description = "A list of IAM role ARNs that are allowed to decrypt using this key."
+  type        = list(string)
+  default     = []
+}
+
+# ... (rest of the variables are unchanged)

@@ -33,6 +33,24 @@ data "aws_iam_policy_document" "key_policy" {
       }
     }
   }
+
+  # --- ADD THIS NEW DYNAMIC STATEMENT ---
+  dynamic "statement" {
+    for_each = length(var.lambda_role_arns_for_decrypt) > 0 ? var.lambda_role_arns_for_decrypt : []
+    content {
+      sid    = "AllowLambdaToDecryptMessages"
+      effect = "Allow"
+      principals {
+        type        = "AWS"
+        identifiers = [statement.value] # The role ARN from the list
+      }
+      actions = [
+        "kms:Decrypt",
+        "kms:GenerateDataKey"
+      ]
+      resources = ["*"] # In a key policy, "*" refers to the key itself
+    }
+  }
 }
 
 resource "aws_kms_key" "this" {

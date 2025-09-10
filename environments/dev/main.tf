@@ -3,6 +3,7 @@ module "encryption_key" {
 
   key_alias_name = "visual-wizard-dev-key"
   s3_source_bucket_arn = module.image_bucket.bucket_arn
+  lambda_role_arns_for_decrypt = [module.image_processing_lambda_iam_role.role_arn]
   tags           = { Project = "VisualWizard", Environment = "Dev" }
 }
 
