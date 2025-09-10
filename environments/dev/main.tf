@@ -10,7 +10,7 @@ module "image_bucket" {
   }
 }
 
-# --- DYNAMODB  TABLE MODULE ---
+# --- DYNAMODB TABLE MODULE ---
 module "labels_table" {
   source = "../../modules/dynamodb"
 
