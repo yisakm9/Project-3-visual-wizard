@@ -87,6 +87,9 @@ resource "aws_s3_bucket_notification" "bucket_notification" {
     events        = ["s3:ObjectCreated:*"]
     filter_suffix = ".png"
   }
+
+  # This tells Terraform to wait until the SQS policy is created before creating this notification.
+  depends_on = [aws_sqs_queue_policy.s3_to_sqs_policy]
 }
 
 # --- IAM & LAMBDA RESOURCES ---

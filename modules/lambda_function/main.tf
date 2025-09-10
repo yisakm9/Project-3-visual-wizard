@@ -1,7 +1,8 @@
 data "archive_file" "this" {
   type        = "zip"
   source_dir  = var.source_path
-  output_path = "${path.module}/${var.function_name}.zip"
+   # Use a temporary directory to avoid polluting the module path
+  output_path = "${path.tmp}/${var.function_name}.zip"
 }
 
 resource "aws_lambda_function" "this" {
