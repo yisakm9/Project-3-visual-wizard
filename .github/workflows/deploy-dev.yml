@@ -31,7 +31,6 @@ jobs:
       - name: 'Configure AWS Credentials (OIDC)'
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          # IMPORTANT: Ensure this role ARN is correct and exists in your AWS account
           role-to-assume: arn:aws:iam::456202167790:role/githubaction
           aws-region: ${{ env.AWS_REGION }}
           role-session-name: GitHubActions-Terraform-Plan
@@ -44,18 +43,16 @@ jobs:
       - name: 'Install Python Test Dependencies'
         run: pip install -r requirements-dev.txt
       
+      # --- THIS IS THE CORRECTED STEP ---
       - name: 'Run Pytest Unit Tests'
         env:
-          # Mock environment variables for testing purposes
           LABELS_TABLE_NAME: "mock-table-for-testing"
           GSI_NAME: "mock-index-for-testing"
-          # Add the project root to PYTHONPATH so imports from 'src' work correctly
           PYTHONPATH: "." 
-        run: pytest test/
+        run: python -m pytest test/
 
       - name: 'Set up Terraform'
         uses: hashicorp/setup-terraform@v3
-        # Use a specific, stable version of Terraform
         with:
           terraform_version:  1.13.1 
 
