@@ -1,0 +1,3 @@
+pytest
+moto[s3,lambda,dynamodb,rekognition,iam]
+boto3
