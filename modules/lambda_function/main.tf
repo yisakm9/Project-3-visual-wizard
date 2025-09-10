@@ -1,18 +1,12 @@
-data "archive_file" "this" {
-  type        = "zip"
-  source_dir  = var.source_path
-   # Use a temporary directory to avoid polluting the module path
-  output_path = "${path.tmp}/${var.function_name}.zip"
-}
-
 resource "aws_lambda_function" "this" {
   function_name = var.function_name
   handler       = var.handler
   runtime       = var.runtime
   role          = var.iam_role_arn
 
-  filename         = data.archive_file.this.output_path
-  source_code_hash = data.archive_file.this.output_base64sha256
+  # The filename and hash are now passed in directly
+  filename         = var.filename
+  source_code_hash = var.source_code_hash
 
   timeout = 30 # seconds
 

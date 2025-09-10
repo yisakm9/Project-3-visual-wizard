@@ -142,8 +142,9 @@ module "image_processing_lambda" {
   function_name = "visual-wizard-image-processing-dev"
   handler       = "image_processing.handler"
   runtime       = "python3.9"
-  source_path   = "../../src/image_processing"
   iam_role_arn  = module.image_processing_lambda_iam_role.role_arn
+  filename         = "${path.root}/image-processing.zip"
+  source_code_hash = filebase64sha256("${path.root}/image-processing.zip")
   environment_variables = {
     LABELS_TABLE_NAME = module.labels_table.table_name
   }
@@ -195,8 +196,9 @@ module "search_by_label_lambda" {
   function_name = "visual-wizard-search-by-label-dev"
   handler       = "search_by_label.handler"
   runtime       = "python3.9"
-  source_path   = "../../src/search_by_label"
   iam_role_arn  = module.search_by_label_lambda_iam_role.role_arn
+  filename         = "${path.root}/search-by-label.zip"
+  source_code_hash = filebase64sha256("${path.root}/search-by-label.zip")
   environment_variables = {
     LABELS_TABLE_NAME = module.labels_table.table_name,
     GSI_NAME          = module.labels_table.gsi_name

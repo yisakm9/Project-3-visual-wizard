@@ -52,7 +52,10 @@ jobs:
           pip install -r requirements-dev.txt
           echo "--- Running tests ---"
           python -m pytest test/
-
+      - name: 'Create Lambda Deployment Packages'
+        run: |
+           (cd src/image_processing && zip -r ../../environments/dev/image-processing.zip .)
+           (cd src/search_by_label && zip -r ../../environments/dev/search-by-label.zip .)
       - name: 'Set up Terraform'
         uses: hashicorp/setup-terraform@v3
         with:
