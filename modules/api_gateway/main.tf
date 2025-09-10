@@ -1,6 +1,6 @@
 resource "aws_api_gateway_rest_api" "this" {
   name        = var.api_name
-  description = "API for the Visual Wizard project"
+  description = "API for the Visual Wizard project - v2"
 
   # The 'body' attribute is a JSON representation of the entire API structure.
   # We will use its hash to detect changes.
