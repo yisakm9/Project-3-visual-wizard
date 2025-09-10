@@ -1,4 +1,4 @@
-name: 'Terraform CI/CD for Dev'
+name: 'deploy Dev'
 
 on:
   push:
