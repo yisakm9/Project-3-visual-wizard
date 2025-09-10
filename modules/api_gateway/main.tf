@@ -17,7 +17,7 @@ resource "aws_api_gateway_rest_api" "this" {
             httpMethod           = "POST"
             payloadFormatVersion = "1.0"
             type                 = "aws_proxy"
-            uri                  = "arn:aws:apigateway:${data.aws_region.current.name}:lambda:path/2015-03-31/functions/${var.lambda_invoke_arn}/invocations"
+            uri                  = "arn:aws:apigateway:${data.aws_region.current.id}:lambda:path/2015-03-31/functions/${var.lambda_invoke_arn}/invocations"
           }
         }
       }
