@@ -77,7 +77,7 @@ data "aws_iam_policy_document" "image_processing_lambda_policy_doc" {
     resources = ["*"]
   }
   statement {
-    actions   = ["dynamodb:PutItem"]
+    actions   = ["dynamodb:PutItem","dynamodb:BatchWriteItem" ]
     resources = [module.labels_table.table_arn]
   }
   statement {
