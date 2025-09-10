@@ -217,3 +217,8 @@ module "search_api" {
   lambda_invoke_arn = module.search_by_label_lambda.function_arn
   tags            = { Project = "VisualWizard", Environment = "Dev" }
 }
+
+
+resource "random_pet" "state_breaker" {
+  length = 2
+}
