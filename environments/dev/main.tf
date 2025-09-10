@@ -141,3 +141,61 @@ resource "aws_lambda_event_source_mapping" "sqs_trigger" {
   event_source_arn = module.image_processing_queue.queue_arn
   function_name    = module.image_processing_lambda.function_arn
 }
+
+# --- IAM & LAMBDA RESOURCES FOR SEARCH ---
+
+module "search_by_label_lambda_iam_role" {
+  source    = "../../modules/iam"
+  role_name = "visual-wizard-search-by-label-role-dev"
+  tags      = { Project = "VisualWizard", Environment = "Dev" }
+}
+
+data "aws_iam_policy_document" "search_lambda_policy_doc" {
+  statement {
+    actions   = ["dynamodb:Query"]
+    # Allow querying both the table and the specific GSI
+    resources = [
+      module.labels_table.table_arn,
+      "${module.labels_table.table_arn}/index/${module.labels_table.gsi_name}"
+    ]
+  }
+}
+
+resource "aws_iam_policy" "search_policy" {
+  name   = "visual-wizard-search-by-label-policy-dev"
+  policy = data.aws_iam_policy_document.search_lambda_policy_doc.json
+}
+
+resource "aws_iam_role_policy_attachment" "search_custom" {
+  role       = module.search_by_label_lambda_iam_role.role_name
+  policy_arn = aws_iam_policy.search_policy.arn
+}
+
+resource "aws_iam_role_policy_attachment" "search_basic_execution" {
+  role       = module.search_by_label_lambda_iam_role.role_name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
+module "search_by_label_lambda" {
+  source        = "../../modules/lambda_function"
+  function_name = "visual-wizard-search-by-label-dev"
+  handler       = "search_by_label.handler"
+  runtime       = "python3.9"
+  source_path   = "../../src/search_by_label"
+  iam_role_arn  = module.search_by_label_lambda_iam_role.role_arn
+  environment_variables = {
+    LABELS_TABLE_NAME = module.labels_table.table_name,
+    GSI_NAME          = module.labels_table.gsi_name
+  }
+  tags = { Project = "VisualWizard", Environment = "Dev" }
+}
+
+# --- API GATEWAY MODULE ---
+
+module "search_api" {
+  source = "../../modules/api_gateway"
+
+  api_name        = "visual-wizard-api-dev"
+  lambda_invoke_arn = module.search_by_label_lambda.function_arn
+  tags            = { Project = "VisualWizard", Environment = "Dev" }
+}
