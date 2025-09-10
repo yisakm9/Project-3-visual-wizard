@@ -9,3 +9,8 @@ variable "tags" {
   default     = {}
 }
 
+variable "kms_key_arn" {
+  description = "The ARN of the KMS key to use for bucket encryption."
+  type        = string
+  default     = null # Make it optional
+}

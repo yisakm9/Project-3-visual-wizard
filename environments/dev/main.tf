@@ -1,8 +1,16 @@
+module "encryption_key" {
+  source = "../../modules/kms"
+
+  key_alias_name = "visual-wizard-dev-key"
+  tags           = { Project = "VisualWizard", Environment = "Dev" }
+}
+
 # --- S3 BUCKET MODULE ---
 module "image_bucket" {
   source = "../../modules/s3"
 
   bucket_name = var.image_bucket_name
+  kms_key_arn = module.encryption_key.key_arn # Pass the key ARN
   tags = {
     Project     = "VisualWizard"
     Environment = "Dev"
@@ -31,6 +39,8 @@ module "image_processing_queue" {
   source = "../../modules/sqs"
 
   queue_name = "visual-wizard-image-processing-queue-dev"
+  kms_key_id = module.encryption_key.key_arn # Pass the key ARN
+  
   tags = {
     Project     = "VisualWizard"
     Environment = "Dev"
