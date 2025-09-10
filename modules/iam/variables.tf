@@ -3,14 +3,8 @@ variable "role_name" {
   type        = string
 }
 
-variable "managed_policy_arns" {
-  description = "A list of ARNs for AWS managed or custom policies to attach."
-  type        = list(string)
-  default     = []
-}
-
 variable "tags" {
-  description = "A map of tags to assign to the resources."
+  description = "A map of tags to assign to the role."
   type        = map(string)
   default     = {}
 }
