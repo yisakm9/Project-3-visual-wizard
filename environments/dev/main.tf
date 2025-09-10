@@ -28,12 +28,15 @@ module "image_processing_queue" {
   source = "../../modules/sqs"
 
   queue_name = "visual-wizard-image-processing-queue-dev"
+  
+  # This new line tells the queue to accept notifications from our bucket
+  s3_notification_source_arn = module.image_bucket.bucket_arn
+
   tags = {
     Project     = "VisualWizard"
     Environment = "Dev"
   }
 }
-
 # --- S3 BUCKET NOTIFICATION RESOURCE ---
 # This resource links the S3 bucket to the SQS queue directly.
 resource "aws_s3_bucket_notification" "bucket_notification" {
