@@ -14,3 +14,9 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "s3_source_bucket_arn" {
+  description = "The ARN of the S3 bucket that will be allowed to use this key for notifications."
+  type        = string
+  default     = null
+}

@@ -2,6 +2,7 @@ module "encryption_key" {
   source = "../../modules/kms"
 
   key_alias_name = "visual-wizard-dev-key"
+  s3_source_bucket_arn = module.image_bucket.bucket_arn
   tags           = { Project = "VisualWizard", Environment = "Dev" }
 }
 
