@@ -3,12 +3,6 @@ variable "queue_name" {
   type        = string
 }
 
-variable "policy" {
-  description = "An IAM policy document to attach to the SQS queue."
-  type        = string
-  default     = null
-}
-
 variable "tags" {
   description = "A map of tags to assign to the queue."
   type        = map(string)

@@ -23,40 +23,44 @@ module "labels_table" {
   }
 }
 
-# --- SQS QUEUE POLICY DEFINITION ---
-# This data source defines the permission for S3 to send messages to SQS.
-# It depends on the bucket and queue, which will be created below.
-data "aws_iam_policy_document" "sqs_queue_policy_doc" {
-  statement {
-    effect = "Allow"
-    principals {
-      type        = "Service"
-      identifiers = ["s3.amazonaws.com"]
-    }
-    actions   = ["sqs:SendMessage"]
-    resources = [module.image_processing_queue.queue_arn] # Depends on the SQS queue
-    condition {
-      test     = "ArnEquals"
-      variable = "aws:SourceArn"
-      values   = [module.image_bucket.bucket_arn] # Depends on the S3 bucket
-    }
-  }
-}
-
 # --- SQS QUEUE MODULE ---
-# The module now receives the fully-resolved policy document.
+# Creates the queue, but does not configure its policy.
 module "image_processing_queue" {
   source = "../../modules/sqs"
 
   queue_name = "visual-wizard-image-processing-queue-dev"
-  policy     = data.aws_iam_policy_document.sqs_queue_policy_doc.json
   tags = {
     Project     = "VisualWizard"
     Environment = "Dev"
   }
 }
 
-# --- S3 BUCKET NOTIFICATION ---
+# --- SQS QUEUE POLICY (Defined in the root) ---
+# This policy grants the S3 service permission to send messages to our queue.
+resource "aws_sqs_queue_policy" "s3_to_sqs_policy" {
+  queue_url = module.image_processing_queue.queue_id
+
+  policy = data.aws_iam_policy_document.sqs_queue_policy_doc.json
+}
+
+data "aws_iam_policy_document" "sqs_queue_policy_doc" {
+  statement {
+    effect    = "Allow"
+    actions   = ["sqs:SendMessage"]
+    resources = [module.image_processing_queue.queue_arn]
+    principals {
+      type        = "Service"
+      identifiers = ["s3.amazonaws.com"]
+    }
+    condition {
+      test     = "ArnEquals"
+      variable = "aws:SourceArn"
+      values   = [module.image_bucket.bucket_arn]
+    }
+  }
+}
+
+# --- S3 BUCKET NOTIFICATION (Defined in the root) ---
 resource "aws_s3_bucket_notification" "bucket_notification" {
   bucket = module.image_bucket.bucket_name
 
@@ -65,6 +69,7 @@ resource "aws_s3_bucket_notification" "bucket_notification" {
     events        = ["s3:ObjectCreated:*"]
     filter_suffix = ".jpg"
   }
+
   queue {
     queue_arn     = module.image_processing_queue.queue_arn
     events        = ["s3:ObjectCreated:*"]
@@ -72,17 +77,13 @@ resource "aws_s3_bucket_notification" "bucket_notification" {
   }
 }
 
-
 # --- IAM & LAMBDA RESOURCES ---
 
 # IAM Role for the Lambda
 module "image_processing_lambda_iam_role" {
   source    = "../../modules/iam"
   role_name = "visual-wizard-image-processing-role-dev"
-  tags = {
-    Project     = "VisualWizard"
-    Environment = "Dev"
-  }
+  tags      = { Project = "VisualWizard", Environment = "Dev" }
 }
 
 # IAM Policy for the Lambda
@@ -122,8 +123,7 @@ resource "aws_iam_role_policy_attachment" "basic_execution" {
 
 # Lambda Function
 module "image_processing_lambda" {
-  source = "../../modules/lambda_function"
-
+  source        = "../../modules/lambda_function"
   function_name = "visual-wizard-image-processing-dev"
   handler       = "image_processing.handler"
   runtime       = "python3.9"
@@ -132,10 +132,7 @@ module "image_processing_lambda" {
   environment_variables = {
     LABELS_TABLE_NAME = module.labels_table.table_name
   }
-  tags = {
-    Project     = "VisualWizard"
-    Environment = "Dev"
-  }
+  tags = { Project = "VisualWizard", Environment = "Dev" }
 }
 
 # Lambda Trigger
