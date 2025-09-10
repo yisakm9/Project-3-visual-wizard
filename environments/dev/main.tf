@@ -7,7 +7,7 @@ module "encryption_key" {
   tags           = { Project = "VisualWizard", Environment = "Dev" }
 }
 
-# --- S3 BUCKET MODULE ---
+#  S3 BUCKET MODULE 
 module "image_bucket" {
   source = "../../modules/s3"
 
