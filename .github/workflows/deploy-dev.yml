@@ -46,7 +46,11 @@ jobs:
           GSI_NAME: "mock-index-for-testing"
           PYTHONPATH: "." 
         run: |
+          echo "--- Checking for requirements-dev.txt ---"
+          cat requirements-dev.txt
+          echo "--- Installing dependencies ---"
           pip install -r requirements-dev.txt
+          echo "--- Running tests ---"
           python -m pytest test/
 
       - name: 'Set up Terraform'
