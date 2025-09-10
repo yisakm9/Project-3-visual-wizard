@@ -23,22 +23,40 @@ module "labels_table" {
   }
 }
 
+# --- SQS QUEUE POLICY DEFINITION ---
+# This data source defines the permission for S3 to send messages to SQS.
+# It depends on the bucket and queue, which will be created below.
+data "aws_iam_policy_document" "sqs_queue_policy_doc" {
+  statement {
+    effect = "Allow"
+    principals {
+      type        = "Service"
+      identifiers = ["s3.amazonaws.com"]
+    }
+    actions   = ["sqs:SendMessage"]
+    resources = [module.image_processing_queue.queue_arn] # Depends on the SQS queue
+    condition {
+      test     = "ArnEquals"
+      variable = "aws:SourceArn"
+      values   = [module.image_bucket.bucket_arn] # Depends on the S3 bucket
+    }
+  }
+}
+
 # --- SQS QUEUE MODULE ---
+# The module now receives the fully-resolved policy document.
 module "image_processing_queue" {
   source = "../../modules/sqs"
 
   queue_name = "visual-wizard-image-processing-queue-dev"
-  
-  # This new line tells the queue to accept notifications from our bucket
-  s3_notification_source_arn = module.image_bucket.bucket_arn
-
+  policy     = data.aws_iam_policy_document.sqs_queue_policy_doc.json
   tags = {
     Project     = "VisualWizard"
     Environment = "Dev"
   }
 }
-# --- S3 BUCKET NOTIFICATION RESOURCE ---
-# This resource links the S3 bucket to the SQS queue directly.
+
+# --- S3 BUCKET NOTIFICATION ---
 resource "aws_s3_bucket_notification" "bucket_notification" {
   bucket = module.image_bucket.bucket_name
 
@@ -47,7 +65,6 @@ resource "aws_s3_bucket_notification" "bucket_notification" {
     events        = ["s3:ObjectCreated:*"]
     filter_suffix = ".jpg"
   }
-
   queue {
     queue_arn     = module.image_processing_queue.queue_arn
     events        = ["s3:ObjectCreated:*"]
@@ -56,10 +73,11 @@ resource "aws_s3_bucket_notification" "bucket_notification" {
 }
 
 
-# --- IAM RESOURCES FOR IMAGE PROCESSING LAMBDA ---
+# --- IAM & LAMBDA RESOURCES ---
 
+# IAM Role for the Lambda
 module "image_processing_lambda_iam_role" {
-  source = "../../modules/iam"
+  source    = "../../modules/iam"
   role_name = "visual-wizard-image-processing-role-dev"
   tags = {
     Project     = "VisualWizard"
@@ -67,6 +85,7 @@ module "image_processing_lambda_iam_role" {
   }
 }
 
+# IAM Policy for the Lambda
 data "aws_iam_policy_document" "image_processing_lambda_policy_doc" {
   statement {
     actions   = ["s3:GetObject"]
@@ -77,7 +96,7 @@ data "aws_iam_policy_document" "image_processing_lambda_policy_doc" {
     resources = ["*"]
   }
   statement {
-    actions   = ["dynamodb:PutItem","dynamodb:BatchWriteItem" ]
+    actions   = ["dynamodb:PutItem", "dynamodb:BatchWriteItem"]
     resources = [module.labels_table.table_arn]
   }
   statement {
@@ -91,18 +110,17 @@ resource "aws_iam_policy" "image_processing_policy" {
   policy = data.aws_iam_policy_document.image_processing_lambda_policy_doc.json
 }
 
+# Policy Attachments
 resource "aws_iam_role_policy_attachment" "custom" {
   role       = module.image_processing_lambda_iam_role.role_name
   policy_arn = aws_iam_policy.image_processing_policy.arn
 }
-
 resource "aws_iam_role_policy_attachment" "basic_execution" {
   role       = module.image_processing_lambda_iam_role.role_name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-
-# --- ADD THE LAMBDA FUNCTION MODULE ---
+# Lambda Function
 module "image_processing_lambda" {
   source = "../../modules/lambda_function"
 
@@ -110,9 +128,7 @@ module "image_processing_lambda" {
   handler       = "image_processing.handler"
   runtime       = "python3.9"
   source_path   = "../../src/image_processing"
-
-  iam_role_arn = module.image_processing_lambda_iam_role.role_arn
-  
+  iam_role_arn  = module.image_processing_lambda_iam_role.role_arn
   environment_variables = {
     LABELS_TABLE_NAME = module.labels_table.table_name
   }
@@ -122,7 +138,7 @@ module "image_processing_lambda" {
   }
 }
 
-# --- ADD THE SQS/LAMBDA TRIGGER ---
+# Lambda Trigger
 resource "aws_lambda_event_source_mapping" "sqs_trigger" {
   event_source_arn = module.image_processing_queue.queue_arn
   function_name    = module.image_processing_lambda.function_arn

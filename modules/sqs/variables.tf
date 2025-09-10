@@ -3,14 +3,14 @@ variable "queue_name" {
   type        = string
 }
 
+variable "policy" {
+  description = "An IAM policy document to attach to the SQS queue."
+  type        = string
+  default     = null
+}
+
 variable "tags" {
   description = "A map of tags to assign to the queue."
   type        = map(string)
   default     = {}
-}
-
-variable "s3_notification_source_arn" {
-  description = "The ARN of the S3 bucket that is allowed to send messages. If provided, a policy will be created."
-  type        = string
-  default     = null
 }
