@@ -1,14 +1,12 @@
-# .github/workflows/deploy-dev.yml
-
 name: 'Terraform CI/CD for Dev'
 
 on:
   push:
     branches:
-      - master 
+      - master # Note: Change this to 'main' if that is your primary branch
   pull_request:
     branches:
-      - master 
+      - master # Note: Change this to 'main' if that is your primary branch
   workflow_dispatch:
 
 permissions:
@@ -33,7 +31,8 @@ jobs:
       - name: 'Configure AWS Credentials (OIDC)'
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::456202167790:role/githubaction #  IAM ROLE ARN
+          # IMPORTANT: Ensure this role ARN is correct and exists in your AWS account
+          role-to-assume: arn:aws:iam::456202167790:role/githubaction
           aws-region: ${{ env.AWS_REGION }}
           role-session-name: GitHubActions-Terraform-Plan
 
@@ -45,29 +44,26 @@ jobs:
       - name: 'Install Python Test Dependencies'
         run: pip install -r requirements-dev.txt
       
-      # --- THIS IS THE CORRECTED STEP ---
       - name: 'Run Pytest Unit Tests'
         env:
-          DYNAMODB_TABLE_NAME: "mock-table-for-testing"
-          DYNAMODB_INDEX_NAME: "mock-index-for-testing"
-          # Add the project root to the PYTHONPATH so imports from 'src' work correctly.
+          # Mock environment variables for testing purposes
+          LABELS_TABLE_NAME: "mock-table-for-testing"
+          GSI_NAME: "mock-index-for-testing"
+          # Add the project root to PYTHONPATH so imports from 'src' work correctly
           PYTHONPATH: "." 
         run: pytest test/
 
-      - name: 'Create Lambda Deployment Packages'
-        run: |
-          (cd src/image_processing && zip -r ../../environments/dev/image-processing.zip .)
-          (cd src/search_by_label && zip -r ../../environments/dev/search-by-label.zip .)
-
       - name: 'Set up Terraform'
         uses: hashicorp/setup-terraform@v3
+        # Use a specific, stable version of Terraform
         with:
-          terraform_version:  1.13.1 #
+          terraform_version:  1.13.1 
 
       - name: 'Install TFLint for Terraform Linting'
         uses: terraform-linters/setup-tflint@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: 'Run TFLint'
         run: tflint --recursive
         
@@ -113,21 +109,18 @@ jobs:
             if (botComment) { await github.rest.issues.updateComment({ owner: context.repo.owner, repo: context.repo.repo, comment_id: botComment.id, body: newBody }); }
             else { await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, body: newBody }); }
 
-      - name: 'Upload Terraform and Lambda Artifacts'
+      - name: 'Upload Terraform Plan Artifact'
         uses: actions/upload-artifact@v4
         with:
-          name: build-artifacts-dev
-          path: |
-            ${{ env.TF_WORKING_DIR }}/tfplan
-            ${{ env.TF_WORKING_DIR }}/image-processing.zip
-            ${{ env.TF_WORKING_DIR }}/search-by-label.zip
+          name: tfplan-dev
+          path: ${{ env.TF_WORKING_DIR }}/tfplan
           retention-days: 1
 
   deploy_to_dev:
     name: 'Deploy to Dev'
     runs-on: ubuntu-latest
     needs: validate_and_plan
-    if: github.ref == 'refs/heads/master' && github.event_name == 'push' # Change 'main' to 'master' if needed
+    if: (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main') && github.event_name == 'push'
     environment: dev
 
     env:
@@ -141,19 +134,19 @@ jobs:
       - name: 'Configure AWS Credentials (OIDC)'
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::456202167790:role/githubaction #  IAM ROLE ARN
+          role-to-assume: arn:aws:iam::456202167790:role/githubaction
           aws-region: ${{ env.AWS_REGION }}
           role-session-name: GitHubActions-Terraform-Apply
 
       - name: 'Set up Terraform'
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version:  1.13.1 #
+          terraform_version:  1.13.1 
       
-      - name: 'Download Build Artifacts'
+      - name: 'Download Terraform Plan Artifact'
         uses: actions/download-artifact@v4
         with:
-          name: build-artifacts-dev
+          name: tfplan-dev
           path: ${{ env.TF_WORKING_DIR }}
         
       - name: 'Terraform Init'

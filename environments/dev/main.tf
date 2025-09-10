@@ -6,6 +6,7 @@ module "image_bucket" {
   tags = {
     Project     = "VisualWizard"
     Environment = "Dev"
+    ManagedBy   = "GitHub-Actions"
   }
 }
 
