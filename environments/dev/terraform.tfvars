@@ -1,0 +1,1 @@
+image_bucket_name = "visual-wizard-images-ique-bluba-90121"
