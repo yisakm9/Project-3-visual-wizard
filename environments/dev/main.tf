@@ -15,6 +15,7 @@ module "labels_table" {
 
   table_name        = var.labels_table_name
   partition_key     = "ImageKey"
+  sort_key          = "Label" 
   gsi_name          = "LabelIndex"
   gsi_partition_key = "Label"
   tags = {

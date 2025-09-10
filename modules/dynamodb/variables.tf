@@ -8,6 +8,12 @@ variable "partition_key" {
   type        = string
 }
 
+variable "sort_key" {
+  description = "The name of the sort key attribute."
+  type        = string
+  default     = null
+}
+
 variable "gsi_name" {
   description = "The name of the Global Secondary Index."
   type        = string
