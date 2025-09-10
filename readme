@@ -1,0 +1,157 @@
+# Project: The Visual Wizard - An AI-Powered, Serverless Image Analysis and Search Platform
+
+[![CI/CD Pipeline](https://github.com/YOUR_USERNAME/YOUR_REPO/actions/workflows/deploy-dev.yml/badge.svg)](https://github.com/YOUR_USERNAME/YOUR_REPO/actions/workflows/deploy-dev.yml)
+
+The Visual Wizard is a fully automated, event-driven, and serverless application built on Amazon Web Services (AWS). It solves the common problem of managing large, untagged photo libraries by using AI to automatically analyze images, extract descriptive labels, and store them in a searchable database. The entire infrastructure is defined as code using Terraform and deployed via a professional CI/CD pipeline with GitHub Actions.
+
+## Architecture Diagram
+
+The project consists of two primary, decoupled workflows: an asynchronous ingestion pipeline and a synchronous search API.
+
+```mermaid
+graph TD
+    subgraph "Image Ingestion Pipeline (Asynchronous)"
+        direction TB
+        User[👤 User] -- Uploads image --> S3[🖼️ AWS S3 Bucket];
+        S3 -- s3:ObjectCreated:* --> SQS[📦 AWS SQS Queue];
+        SQS -- Triggers --> LP[λ Image Processing Lambda];
+        LP -- Analyzes image --> Rekognition[👁️ Amazon Rekognition];
+        Rekognition -- Returns labels --> LP;
+        LP -- Stores labels --> DynamoDB[🗄️ Amazon DynamoDB Table];
+    end
+
+    subgraph "Search API (Synchronous)"
+        direction TB
+        Client[👤 Client / App] -- GET /search?label=... --> APIGW[🌐 Amazon API Gateway];
+        APIGW -- Invokes --> LS[λ Search Lambda];
+        LS -- Queries GSI --> DynamoDB;
+    end
+
+    subgraph "Security"
+        KMS[🔑 AWS KMS] -- Encrypts --> S3;
+        KMS -- Encrypts --> SQS;
+    end
+```
+
+## Features
+
+-   **Automated Image Tagging:** Leverages Amazon Rekognition to detect objects, scenes, and concepts in images with >90% confidence.
+-   **Fully Serverless:** Utilizes AWS Lambda for compute, ensuring infinite scalability and a pay-for-what-you-use cost model.
+-   **Resilient & Decoupled:** An SQS queue between S3 and Lambda ensures that image uploads are processed reliably, with built-in retries.
+-   **Fast, Indexed Searching:** A DynamoDB Global Secondary Index (GSI) provides single-digit millisecond query performance for searching images by label.
+-   **Secure by Design:** All data at rest in S3 and SQS is encrypted using a Customer-Managed Key (CMK) from AWS KMS.
+-   **Infrastructure as Code (IaC):** The entire AWS infrastructure is defined declaratively using Terraform, enabling repeatable and version-controlled deployments.
+-   **CI/CD Automation:** A professional GitHub Actions pipeline automates testing, linting, security scanning, and deployment, including a secure manual workflow for destroying the environment.
+
+## Technology Stack
+
+| Category         | Technology / Service                                       |
+| ---------------- | ---------------------------------------------------------- |
+| **AWS Services** | S3, SQS, Lambda, DynamoDB, Rekognition, API Gateway, IAM, KMS, CloudWatch |
+| **IaC**          | Terraform, TFLint                                          |
+| **CI/CD**        | GitHub Actions, OIDC                                       |
+| **Application**  | Python 3.9, Boto3                                          |
+| **Testing**      | Pytest, Moto                                               |
+| **Security**     | Trivy                                                      |
+
+## Prerequisites
+
+Before deploying, ensure you have the following:
+1.  An AWS Account.
+2.  An IAM User or Role with permissions to create the resources in this project.
+3.  The AWS CLI installed and configured locally.
+4.  Terraform (`~> 1.5.0`) installed locally.
+5.  A GitHub repository for this project.
+
+## Setup and Configuration
+
+This project uses a secure, OIDC-based CI/CD pipeline and a remote backend for Terraform state.
+
+1.  **Clone the Repository:**
+    ```bash
+    git clone https://github.com/YOUR_USERNAME/YOUR_REPO.git
+    cd YOUR_REPO
+    ```
+
+2.  **Configure AWS OIDC for GitHub Actions:**
+    -   Follow the [official AWS documentation](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_create_oidc.html) to set up an OIDC Identity Provider in your AWS IAM account.
+    -   Create an IAM Role that trusts this provider and your specific repository. Attach the `AdministratorAccess` policy for this project.
+    -   Note the ARN of this role.
+
+3.  **Create an S3 Bucket for Terraform State:**
+    -   Manually create a private S3 bucket in your AWS account to store the Terraform state file (e.g., `your-name-tfstate-dev-unique`).
+    -   **Enable bucket versioning** on this S3 bucket as a best practice.
+
+4.  **Configure GitHub Secrets:**
+    -   In your GitHub repository, go to `Settings > Secrets and variables > Actions`.
+    -   Create the following repository secrets:
+        -   `AWS_REGION`: The AWS region you are deploying to (e.g., `us-east-1`).
+        -   `TF_STATE_BUCKET_DEV`: The name of the S3 bucket you just created for Terraform state.
+    -   Update the hardcoded `role-to-assume` ARN in the workflow files (`.github/workflows/*.yml`) to match the role you created in step 2.
+
+## Deployment
+
+Deployment is fully automated via the CI/CD pipeline.
+
+-   **To Deploy or Update:** Simply commit and push your changes to the `master` (or `main`) branch.
+    ```bash
+    git push origin master
+    ```
+-   The "Terraform CI/CD for Dev" workflow in GitHub Actions will automatically trigger, run all validation steps, and apply the changes to your AWS account.
+
+## Usage
+
+Once deployed, you can use the Visual Wizard by interacting with the S3 bucket and the API Gateway endpoint.
+
+1.  **Upload an Image:**
+    -   Go to the AWS S3 Console and find your `visual-wizard-images-*` bucket.
+    -   Upload a `.jpg` or `.png` file. The ingestion pipeline will process it automatically.
+
+2.  **Search for the Image:**
+    -   Get the unique API endpoint URL by running the following command from the `environments/dev` directory:
+        ```bash
+        terraform output api_search_url
+        ```
+    -   Use `curl` or a web browser to query the endpoint with a label that was detected in your image:
+        ```bash
+        # Replace the URL and the label with your own
+        curl -X GET "https://xxxxxxxxxx.execute-api.us-east-1.amazonaws.com/v1/search?label=Car"
+        ```
+
+3.  **Expected Response:**
+    ```json
+    {
+      "label": "Car",
+      "images": [
+        "my-favorite-car.jpg"
+      ]
+    }
+    ```
+
+## Local Development and Testing
+
+You can run the Python unit tests locally to validate the Lambda function logic before committing.
+
+1.  **Install Dependencies:**
+    ```bash
+    pip install -r requirements-dev.txt
+    ```
+
+2.  **Run Tests:**
+    ```bash
+    python -m pytest test/
+    ```
+
+## Destroying the Infrastructure
+
+To prevent ongoing costs, a secure, manual workflow is provided to tear down all created resources.
+
+1.  In your GitHub repository, go to the **Actions** tab.
+2.  Select the **"Destroy Dev Environment"** workflow from the list.
+3.  Click the **"Run workflow"** dropdown.
+4.  In the confirmation input box, type the word **`destroy`**.
+5.  Click the green **"Run workflow"** button. The pipeline will execute `terraform destroy` and remove all resources.
+
+---
+
+This project was built as a comprehensive demonstration of professional cloud engineering and DevOps practices.
